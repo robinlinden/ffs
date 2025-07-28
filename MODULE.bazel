@@ -3,3 +3,19 @@
 module(name = "ffs")
 
 bazel_dep(name = "rules_cc", version = "0.1.4")
+
+bazel_dep(name = "hastur")
+archive_override(
+    module_name = "hastur",
+    integrity = "sha256-7l7t+lC1r8jI4eveEuPmNoGwFlVPi/O7ID2Ysv7KlX4=",
+    strip_prefix = "hastur-07b060f5cf4aa90b2007b33f249310da7092be58",
+    # TODO(robinlinden): Make depending on Hastur easier.
+    patch_cmds = [
+        """cat <<EOF >MODULE.bazel
+module(name = "hastur")
+bazel_dep(name = "rules_cc", version = "0.1.4")
+bazel_dep(name = "rules_shell", version = "0.5.0")
+EOF""",
+    ],
+    url = "https://github.com/robinlinden/hastur/archive/07b060f5cf4aa90b2007b33f249310da7092be58.tar.gz",
+)

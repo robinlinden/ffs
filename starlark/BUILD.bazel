@@ -1,9 +1,22 @@
-load("@rules_cc//cc:defs.bzl", "cc_library")
+load("@rules_cc//cc:defs.bzl", "cc_library", "cc_test")
 load("//bzl:copts.bzl", "FFS_COPTS")
 
 cc_library(
     name = "starlark",
     hdrs = glob(["*.h"]),
-    visibility = ["//visibility:public"],
     copts = FFS_COPTS,
+    visibility = ["//visibility:public"],
 )
+
+[cc_test(
+    name = src.removesuffix(".cc"),
+    size = "small",
+    srcs = [src],
+    copts = FFS_COPTS,
+    deps = [
+        ":starlark",
+        "@hastur//etest",
+    ],
+) for src in glob(
+    include = ["*_test.cc"],
+)]
