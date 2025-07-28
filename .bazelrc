@@ -1,0 +1,10 @@
+# Bazel configuration
+# =========================================================
+
+build --enable_platform_specific_config
+
+# Compiler configuration
+# =========================================================
+
+build:linux --cxxopt=-std=c++2b
+build:windows --cxxopt=-std:c++latest

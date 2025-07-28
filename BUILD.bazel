@@ -1,0 +1,50 @@
+load("@rules_cc//cc:defs.bzl", "cc_binary")
+
+FFS_LINUX_WARNING_FLAGS = [
+    "-Wall",
+    "-Wextra",
+    "-pedantic-errors",
+    "-Werror",
+    "-fno-common",
+    "-Wctad-maybe-unsupported",
+    "-Wdouble-promotion",
+    "-Wformat=2",
+    "-Wmissing-declarations",
+    "-Wnon-virtual-dtor",
+    "-Wnull-dereference",
+    "-Woverloaded-virtual",
+    "-Wshadow",
+    "-Wsign-compare",
+    "-Wundef",
+
+    # Common idiom for zeroing members.
+    "-Wno-missing-field-initializers",
+]
+
+FFS_MSVC_WARNING_FLAGS = [
+    # More warnings.
+    "/W4",
+    # Treat warnings as errors.
+    "/WX",
+]
+
+FFS_CLANG_CL_WARNING_FLAGS = [
+    # -Wall in clang-cl is an alias of -Weverything, and -W4 is an alias of clang's -Wall + -Wextra.
+    "-W4",
+    "-Werror",
+    # Common idiom for zeroing members.
+    "-Wno-missing-field-initializers",
+]
+
+FFS_COPTS = select({
+    "@rules_cc//cc/compiler:clang": FFS_LINUX_WARNING_FLAGS,
+    "@rules_cc//cc/compiler:clang-cl": FFS_CLANG_CL_WARNING_FLAGS,
+    "@rules_cc//cc/compiler:gcc": FFS_LINUX_WARNING_FLAGS,
+    "@rules_cc//cc/compiler:msvc-cl": FFS_MSVC_WARNING_FLAGS,
+})
+
+cc_binary(
+    name = "ffs",
+    srcs = ["main.cc"],
+    copts = FFS_COPTS,
+)
