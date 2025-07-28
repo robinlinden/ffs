@@ -1,4 +1,8 @@
-load("@rules_cc//cc:defs.bzl", "cc_binary")
+# SPDX-FileCopyrightText: 2022-2025 Robin Lindén <dev@robinlinden.eu>
+#
+# SPDX-License-Identifier: BSD-2-Clause
+
+"""Common copts for ffs targets. Originally from robinlinden/hastur."""
 
 FFS_LINUX_WARNING_FLAGS = [
     "-Wall",
@@ -42,9 +46,3 @@ FFS_COPTS = select({
     "@rules_cc//cc/compiler:gcc": FFS_LINUX_WARNING_FLAGS,
     "@rules_cc//cc/compiler:msvc-cl": FFS_MSVC_WARNING_FLAGS,
 })
-
-cc_binary(
-    name = "ffs",
-    srcs = ["main.cc"],
-    copts = FFS_COPTS,
-)

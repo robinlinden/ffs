@@ -1,0 +1,9 @@
+load("@rules_cc//cc:defs.bzl", "cc_library")
+load("//bzl:copts.bzl", "FFS_COPTS")
+
+cc_library(
+    name = "starlark",
+    hdrs = glob(["*.h"]),
+    visibility = ["//visibility:public"],
+    copts = FFS_COPTS,
+)
