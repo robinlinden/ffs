@@ -6,6 +6,10 @@ test --test_output=errors
 test --test_summary=terse
 test --test_verbose_timeout_warnings
 
+# The repo contents cache introduced in 8.3.0 is broken.
+# See: https://github.com/bazelbuild/bazel/issues/26450
+build --repo_contents_cache=
+
 # Compiler configuration
 # =========================================================
 
