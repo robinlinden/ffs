@@ -2,6 +2,7 @@
 //
 // SPDX-License-Identifier: BSD-2-Clause
 
+#include "starlark/parser.h"
 #include "starlark/token.h"
 #include "starlark/tokenizer.h"
 
@@ -53,4 +54,10 @@ int main(int argc, char **argv) {
   }
 
   std::cout << "Tokens:\n" << to_string(*tokens) << "\n";
+
+  auto program = starlark::parse(content);
+  if (!program) {
+    std::cerr << "Error: Failed to parse input.\n";
+    return 1;
+  }
 }
