@@ -203,19 +203,23 @@ constexpr std::string_view to_string(Keyword k) {
 
 struct Identifier {
   std::string name;
+  constexpr bool operator==(Identifier const &) const = default;
 };
 
 constexpr std::string_view to_string(const Identifier &id) { return id.name; }
 
 struct StringLiteral {
   std::string value;
+  constexpr bool operator==(StringLiteral const &) const = default;
 };
 
 inline std::string to_string(const StringLiteral &str) {
   return std::format(R"("{}")", str.value);
 }
 
-struct Eof {};
+struct Eof {
+  constexpr bool operator==(Eof const &) const = default;
+};
 
 constexpr std::string_view to_string(const Eof &) { return "<eof>"; }
 
