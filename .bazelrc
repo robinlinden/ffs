@@ -1,6 +1,8 @@
 # Bazel configuration
 # =========================================================
 
+common --lockfile_mode=off
+
 build --enable_platform_specific_config
 test --test_output=errors
 test --test_summary=terse
