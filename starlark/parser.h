@@ -19,13 +19,25 @@
 
 namespace starlark {
 
+struct StringLiteral {
+  std::string value;
+  constexpr bool operator==(StringLiteral const &) const = default;
+};
+
+using Expression = std::variant<StringLiteral>;
+
+struct ExpressionStmt {
+  Expression expr;
+  constexpr bool operator==(ExpressionStmt const &) const = default;
+};
+
 struct LoadStmt {
   std::string module_name;
   std::vector<std::pair<std::string, std::string>> symbols;
   constexpr bool operator==(LoadStmt const &) const = default;
 };
 
-using Statement = std::variant<LoadStmt>;
+using Statement = std::variant<LoadStmt, ExpressionStmt>;
 
 struct Program {
   std::vector<Statement> statements;
@@ -45,6 +57,14 @@ public:
 
       if (std::holds_alternative<token::Eof>(token)) {
         return program;
+      }
+
+      if (auto *sl = std::get_if<token::StringLiteral>(&token)) {
+        program.statements.push_back(ExpressionStmt{
+            .expr = StringLiteral{.value = std::move(sl->value)},
+        });
+
+        continue;
       }
 
       if (auto const *kw = std::get_if<token::Keyword>(&token)) {

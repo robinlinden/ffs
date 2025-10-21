@@ -41,6 +41,18 @@ int main() {
                   },
               },
           },
+          {
+              R"("hello world")",
+              starlark::Program{
+                  .statements{
+                      starlark::ExpressionStmt{
+                          .expr{
+                              starlark::StringLiteral{.value = "hello world"},
+                          },
+                      },
+                  },
+              },
+          },
       });
 
   etest::Suite s{};
