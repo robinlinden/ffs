@@ -44,6 +44,14 @@ jobs:
           sudo apt-get install --assume-yes --no-install-recommends ${{ matrix.compiler }}-${{ matrix.version }}
       - run: bazel test ...
 
+  pre-commit:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+      - run: pipx install pre-commit==4.3.0
+      - run: pre-commit run --all-files
+
   clang-format:
     runs-on: ubuntu-24.04
     timeout-minutes: 5
