@@ -9,21 +9,26 @@ permissions:
 
 jobs:
   linux:
-    name: linux-${{ matrix.name }}
-    runs-on: ubuntu-24.04
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
     timeout-minutes: 5
 
     strategy:
       fail-fast: false
       matrix:
         include:
-          - name: gcc-14
+          - name: linux-gcc-14
+            os: ubuntu-24.04
             cc: gcc-14
             cxx: g++-14
 
-          - name: clang-18
+          - name: linux-clang-18
+            os: ubuntu-24.04
             cc: clang-18
             cxx: clang++-18
+
+          - name: windows-msvc
+            os: windows-2025
 
     steps:
       - run: echo "CC=${{ matrix.cc }}" >>$GITHUB_ENV && echo "CXX=${{ matrix.cxx }}" >>$GITHUB_ENV
