@@ -18,30 +18,17 @@ jobs:
       matrix:
         include:
           - name: gcc-14
-            compiler: gcc
-            version: 14
+            cc: gcc-14
+            cxx: g++-14
 
           - name: clang-18
-            compiler: clang
-            version: 18
+            cc: clang-18
+            cxx: clang++-18
 
     steps:
-      - name: Setup gcc
-        if: startsWith(matrix.compiler, 'gcc')
-        run: |
-          echo "CC=gcc-${{ matrix.version }}" >> $GITHUB_ENV
-          echo "CXX=g++-${{ matrix.version }}" >> $GITHUB_ENV
-      - name: Setup clang
-        if: startsWith(matrix.compiler, 'clang')
-        run: |
-          echo "CC=clang-${{ matrix.version }}" >> $GITHUB_ENV
-          echo "CXX=clang++-${{ matrix.version }}" >> $GITHUB_ENV
+      - run: echo "CC=${{ matrix.cc }}" >>$GITHUB_ENV && echo "CXX=${{ matrix.cxx }}" >>$GITHUB_ENV
+        if: ${{ matrix.cc != '' }}
       - uses: actions/checkout@v5
-      - name: Install
-        if: ${{ !matrix.skip-compiler-install }}
-        run: |
-          sudo apt-get update
-          sudo apt-get install --assume-yes --no-install-recommends ${{ matrix.compiler }}-${{ matrix.version }}
       - run: bazel test ...
 
   pre-commit:
