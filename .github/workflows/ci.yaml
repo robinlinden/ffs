@@ -33,14 +33,14 @@ jobs:
     steps:
       - run: echo "CC=${{ matrix.cc }}" >>$GITHUB_ENV && echo "CXX=${{ matrix.cxx }}" >>$GITHUB_ENV
         if: ${{ matrix.cc != '' }}
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - run: bazel test ...
 
   pre-commit:
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - run: pipx install pre-commit==4.3.0
       - run: pre-commit run --all-files
 
@@ -48,7 +48,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - run: sudo apt-get update && sudo apt-get install --assume-yes --no-install-recommends clang-format-18
       - run: find . -name "*.h" -o -name "*.cc" | xargs clang-format-18 -style=file -i
       - run: git diff --exit-code
@@ -57,7 +57,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - run: wget --output-document=buildifier https://github.com/bazelbuild/buildtools/releases/download/v8.2.1/buildifier-linux-amd64 && sudo chmod +x buildifier
       - run: ./buildifier --lint=warn --warnings=all -mode diff $(find . -type f -iname "*.build" -or -iname build -or -iname "*.bzl")
 
@@ -65,7 +65,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - run: npm install --global prettier@3.6.2
       - run: npx prettier --ignore-path .gitignore --write .
       - run: git diff --exit-code
