@@ -56,8 +56,8 @@ public:
   std::optional<Program> parse() {
     Program program;
 
-    for (auto maybe_token = tokenizer_.tokenize(); maybe_token;
-         maybe_token = tokenizer_.tokenize()) {
+    for (auto maybe_token = next_token(); maybe_token;
+         maybe_token = next_token()) {
       auto &token = *maybe_token;
 
       if (std::holds_alternative<token::Eof>(token)) {
@@ -106,17 +106,19 @@ public:
 private:
   Tokenizer tokenizer_;
 
+  std::optional<Token> next_token() { return tokenizer_.tokenize(); }
+
   // LoadStmt = 'load' '(' string {',' [identifier '='] string} [','] ')' .
   std::optional<LoadStmt> parse_load_stmt() {
     // load was consumed by the caller.
-    if (auto lparen = tokenizer_.tokenize();
+    if (auto lparen = next_token();
         !lparen || !std::holds_alternative<token::Punctuator>(*lparen) ||
         std::get<token::Punctuator>(*lparen) != token::Punctuator::LParen) {
       std::cerr << "Expected '(' after 'load'.\n";
       return std::nullopt;
     }
 
-    auto module_name = tokenizer_.tokenize();
+    auto module_name = next_token();
     if (!module_name ||
         !std::holds_alternative<token::StringLiteral>(*module_name)) {
       std::cerr << "Expected module name in load statement.\n";
@@ -126,7 +128,7 @@ private:
     std::vector<std::pair<std::string, std::string>> symbols;
 
     while (true) {
-      auto maybe_comma_or_rparen = tokenizer_.tokenize();
+      auto maybe_comma_or_rparen = next_token();
       if (!maybe_comma_or_rparen) {
         std::cerr << "Unexpected end of input in load statement.\n";
         return std::nullopt;
@@ -150,7 +152,7 @@ private:
         return std::nullopt;
       }
 
-      auto maybe_ident_or_symbol = tokenizer_.tokenize();
+      auto maybe_ident_or_symbol = next_token();
       if (!maybe_ident_or_symbol) {
         std::cerr << "Unexpected end of input in load statement.\n";
         return std::nullopt;
@@ -191,16 +193,16 @@ private:
   }
 
   [[nodiscard]] bool expect_next_token(Token const &expected) {
-    auto next_token = tokenizer_.tokenize();
-    if (!next_token) {
+    auto next = next_token();
+    if (!next) {
       std::cerr << "Unexpected end of input, expected " << to_string(expected)
                 << ".\n";
       return false;
     }
 
-    if (next_token != expected) {
+    if (next != expected) {
       std::cerr << "Expected " << to_string(expected) << ", got "
-                << to_string(*next_token) << ".\n";
+                << to_string(*next) << ".\n";
       return false;
     }
 
@@ -208,18 +210,18 @@ private:
   }
 
   template <typename T> [[nodiscard]] std::optional<T> next_token_as() {
-    auto next_token = tokenizer_.tokenize();
-    if (!next_token) {
+    auto next = next_token();
+    if (!next) {
       std::cerr << "Unexpected end of input.\n";
       return std::nullopt;
     }
 
-    if (auto *t = std::get_if<T>(&*next_token); t != nullptr) {
+    if (auto *t = std::get_if<T>(&*next); t != nullptr) {
       return std::move(*t);
     }
 
     std::cerr << "Expected token of type " << typeid(T).name() << ", got "
-              << to_string(*next_token) << ".\n";
+              << to_string(*next) << ".\n";
     return std::nullopt;
   }
 };
