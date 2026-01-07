@@ -6,6 +6,7 @@ common --lockfile_mode=off
 build --enable_platform_specific_config
 test --test_output=errors
 test --test_summary=terse
+test --test_timeout=15
 test --test_verbose_timeout_warnings
 
 # Compiler configuration
