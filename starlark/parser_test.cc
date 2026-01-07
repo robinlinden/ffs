@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2025 Robin Lindén <dev@robinlinden.eu>
+// SPDX-FileCopyrightText: 2025-2026 Robin Lindén <dev@robinlinden.eu>
 //
 // SPDX-License-Identifier: BSD-2-Clause
 
@@ -49,6 +49,16 @@ int main() {
                           .expr{
                               starlark::StringLiteral{.value = "hello world"},
                           },
+                      },
+                  },
+              },
+          },
+          {
+              R"(foo)",
+              starlark::Program{
+                  .statements{
+                      starlark::ExpressionStmt{
+                          .expr{starlark::Identifier{"foo"}},
                       },
                   },
               },

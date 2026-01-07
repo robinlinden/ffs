@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2025 Robin Lindén <dev@robinlinden.eu>
+// SPDX-FileCopyrightText: 2025-2026 Robin Lindén <dev@robinlinden.eu>
 //
 // SPDX-License-Identifier: BSD-2-Clause
 
@@ -24,7 +24,12 @@ struct StringLiteral {
   constexpr bool operator==(StringLiteral const &) const = default;
 };
 
-using Expression = std::variant<StringLiteral>;
+struct Identifier {
+  std::string name;
+  constexpr bool operator==(Identifier const &) const = default;
+};
+
+using Expression = std::variant<StringLiteral, Identifier>;
 
 struct ExpressionStmt {
   Expression expr;
@@ -81,6 +86,14 @@ public:
 
         std::cerr << "Unexpected keyword: " << to_string(*kw) << '\n';
         break;
+      }
+
+      if (auto const *ident = std::get_if<token::Identifier>(&token)) {
+        program.statements.push_back(ExpressionStmt{
+            .expr = Identifier{.name = std::move(ident->name)},
+        });
+
+        continue;
       }
 
       std::cerr << "Unexpected token: " << to_string(token) << '\n';
