@@ -59,7 +59,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - run: wget --output-document=buildifier https://github.com/bazelbuild/buildtools/releases/download/v8.2.1/buildifier-linux-amd64 && sudo chmod +x buildifier
-      - run: ./buildifier --lint=warn --warnings=all -mode diff $(find . -type f -iname "*.build" -or -iname build -or -iname "*.bzl")
+      - run: ./buildifier --lint=warn --warnings=all -mode diff $(find . -type f -iname "*.bazel" -or -iname "*.bzl")
 
   prettier:
     runs-on: ubuntu-24.04
