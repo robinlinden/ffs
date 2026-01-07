@@ -63,6 +63,41 @@ int main() {
                   },
               },
           },
+          {
+              R"(foo(bar = "baz", "qux"))",
+              starlark::Program{
+                  .statements{
+                      starlark::ExpressionStmt{
+                          .expr{
+                              starlark::CallExpr{
+                                  .target = "foo",
+                                  .args{
+                                      {
+                                          starlark::Identifier{"bar"},
+                                          starlark::StringLiteral{"baz"},
+                                      },
+                                      {
+                                          std::nullopt,
+                                          starlark::StringLiteral{"qux"},
+                                      },
+                                  },
+                              },
+                          },
+                      },
+                  },
+              },
+          },
+      });
+
+  // TODO(robinlinden): Return error codes from parser and use that here.
+  static constexpr auto kExpectedParseFailures =
+      std::to_array<std::string_view>({
+          // CallExpr
+          // Missing closing parenthesis.
+          R"(foo(bar = "baz", "qux")",
+          // TODO(robinlinden): Fix.
+          // Argument value is not a string literal.
+          R"(foo(bar = baz, "qux"))",
       });
 
   etest::Suite s{};
@@ -72,6 +107,13 @@ int main() {
       auto program = starlark::parse(input);
       a.require(program.has_value());
       a.expect_eq(*program, expected);
+    });
+  }
+
+  for (auto const &input : kExpectedParseFailures) {
+    s.add_test(std::string{input}, [input](etest::IActions &a) {
+      auto program = starlark::parse(input);
+      a.expect(!program.has_value());
     });
   }
 

@@ -29,7 +29,23 @@ struct Identifier {
   constexpr bool operator==(Identifier const &) const = default;
 };
 
-using Expression = std::variant<StringLiteral, Identifier>;
+struct CallExpr;
+
+using Expression = std::variant<CallExpr, StringLiteral, Identifier>;
+
+struct Argument;
+
+struct CallExpr {
+  std::string target;
+  std::vector<Argument> args;
+  constexpr bool operator==(CallExpr const &) const = default;
+};
+
+struct Argument {
+  std::optional<Identifier> name;
+  Expression expr;
+  constexpr bool operator==(Argument const &) const = default;
+};
 
 struct ExpressionStmt {
   Expression expr;
@@ -89,6 +105,32 @@ public:
       }
 
       if (auto const *ident = std::get_if<token::Identifier>(&token)) {
+        auto next = next_token();
+        if (!next) {
+          // This is fine.
+        } else if (auto const *punc = std::get_if<token::Punctuator>(&*next);
+                   punc != nullptr && *punc == token::Punctuator::LParen) {
+          auto args = parse_argument_list();
+          if (!args) {
+            std::cerr << "Failed to parse argument list.\n";
+            return std::nullopt;
+          }
+
+          program.statements.push_back(ExpressionStmt{
+              .expr =
+                  CallExpr{
+                      .target = std::move(ident->name),
+                      .args = std::move(*args),
+                  },
+          });
+
+          continue;
+        }
+
+        if (next) {
+          reconsume(std::move(*next));
+        }
+
         program.statements.push_back(ExpressionStmt{
             .expr = Identifier{.name = std::move(ident->name)},
         });
@@ -105,8 +147,103 @@ public:
 
 private:
   Tokenizer tokenizer_;
+  std::optional<Token> peeked_token_;
 
-  std::optional<Token> next_token() { return tokenizer_.tokenize(); }
+  std::optional<Token> next_token() {
+    if (peeked_token_) {
+      return std::exchange(peeked_token_, std::nullopt);
+    }
+
+    return tokenizer_.tokenize();
+  }
+
+  void reconsume(Token token) { peeked_token_ = std::move(token); }
+
+  std::optional<std::vector<Argument>> parse_argument_list() {
+    std::vector<Argument> args;
+
+    while (true) {
+      auto maybe_token = next_token();
+      if (!maybe_token) {
+        std::cerr << "Unexpected end of input in argument list.\n";
+        return std::nullopt;
+      }
+
+      if (!args.empty()) {
+        auto const &token = *maybe_token;
+        auto const *punc = std::get_if<token::Punctuator>(&token);
+        if (punc == nullptr || (*punc != token::Punctuator::Comma &&
+                                *punc != token::Punctuator::RParen)) {
+          std::cerr << "Expected ',' or ')' in argument list, got "
+                    << to_string(token) << ".\n";
+          return std::nullopt;
+        }
+
+        if (*punc == token::Punctuator::Comma) {
+          maybe_token = next_token();
+          if (!maybe_token) {
+            std::cerr << "Unexpected end of input in argument list.\n";
+            return std::nullopt;
+          }
+        }
+      }
+
+      auto const &token = *maybe_token;
+
+      if (auto *punc = std::get_if<token::Punctuator>(&token);
+          punc != nullptr && *punc == token::Punctuator::RParen) {
+        break;
+      }
+
+      auto &arg = args.emplace_back();
+      std::optional<Identifier> &name = arg.name;
+      Expression &expr = arg.expr;
+
+      if (auto *ident = std::get_if<token::Identifier>(&token)) {
+        auto next = next_token();
+        if (!next) {
+          std::cerr << "Unexpected end of input in argument list.\n";
+          return std::nullopt;
+        }
+
+        if (auto *eq = std::get_if<token::Punctuator>(&*next);
+            eq != nullptr && *eq == token::Punctuator::Equals) {
+          name = Identifier{.name = std::move(ident->name)};
+
+          auto value_token = next_token();
+          if (!value_token) {
+            std::cerr << "Unexpected end of input in argument list.\n";
+            return std::nullopt;
+          }
+
+          // TODO(robinlinden): Parse expression.
+          if (auto *sl = std::get_if<token::StringLiteral>(&*value_token)) {
+            expr = StringLiteral{.value = std::move(sl->value)};
+            continue;
+          }
+
+          std::cerr << "Expected string literal as argument value, got "
+                    << to_string(*value_token) << ".\n";
+          return std::nullopt;
+        }
+
+        reconsume(std::move(*next));
+        expr = Identifier{.name = std::move(ident->name)};
+        continue;
+      }
+
+      if (auto *sl = std::get_if<token::StringLiteral>(&token)) {
+        expr = StringLiteral{.value = std::move(sl->value)};
+        continue;
+      }
+
+      std::cerr << "Unexpected token in argument list: " << to_string(token)
+                << ".\n";
+      return std::nullopt;
+    }
+
+    return args;
+  }
 
   // LoadStmt = 'load' '(' string {',' [identifier '='] string} [','] ')' .
   std::optional<LoadStmt> parse_load_stmt() {
