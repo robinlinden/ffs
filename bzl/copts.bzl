@@ -46,3 +46,9 @@ FFS_COPTS = select({
     "@rules_cc//cc/compiler:gcc": FFS_LINUX_WARNING_FLAGS,
     "@rules_cc//cc/compiler:msvc-cl": FFS_MSVC_WARNING_FLAGS,
 })
+
+# C++ fuzzing requires a Clang compiler: https://github.com/bazel-contrib/rules_fuzzing#prerequisites
+FFS_FUZZ_PLATFORMS = select({
+    "@rules_cc//cc/compiler:clang": ["@platforms//os:linux"],
+    "//conditions:default": ["@platforms//:incompatible"],
+})

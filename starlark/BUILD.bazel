@@ -1,5 +1,6 @@
 load("@rules_cc//cc:defs.bzl", "cc_library", "cc_test")
-load("//bzl:copts.bzl", "FFS_COPTS")
+load("@rules_fuzzing//fuzzing:cc_defs.bzl", "cc_fuzz_test")
+load("//bzl:copts.bzl", "FFS_COPTS", "FFS_FUZZ_PLATFORMS")
 
 cc_library(
     name = "starlark",
@@ -19,4 +20,15 @@ cc_library(
     ],
 ) for src in glob(
     include = ["*_test.cc"],
+    exclude = ["*_fuzz_test.cc"],
 )]
+
+[cc_fuzz_test(
+    name = src.removesuffix(".cc"),
+    size = "small",
+    testonly = True,
+    srcs = [src],
+    copts = FFS_COPTS,
+    target_compatible_with = FFS_FUZZ_PLATFORMS,
+    deps = [":starlark"],
+) for src in glob(["*_fuzz_test.cc"])]

@@ -49,3 +49,12 @@ build:ubsan --linkopt=-fsanitize-link-c++-runtime
 build:ubsan --action_env=UBSAN_OPTIONS=halt_on_error=1:print_stacktrace=1
 build:ubsan   --test_env=UBSAN_OPTIONS=halt_on_error=1:print_stacktrace=1
 run:ubsan      --run_env=UBSAN_OPTIONS=halt_on_error=1:print_stacktrace=1
+
+# Fuzzing options
+# =========================================================
+
+build:libfuzzer --@rules_fuzzing//fuzzing:cc_engine=@rules_fuzzing//fuzzing/engines:libfuzzer
+build:libfuzzer --@rules_fuzzing//fuzzing:cc_engine_instrumentation=libfuzzer
+
+build:honggfuzz --@rules_fuzzing//fuzzing:cc_engine=@rules_fuzzing//fuzzing/engines:honggfuzz
+build:honggfuzz --@rules_fuzzing//fuzzing:cc_engine_instrumentation=honggfuzz
