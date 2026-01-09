@@ -87,6 +87,33 @@ int main() {
                   },
               },
           },
+          {
+              R"(foo(bar = baz, qux()))",
+              starlark::Program{
+                  .statements{
+                      starlark::ExpressionStmt{
+                          .expr{
+                              starlark::CallExpr{
+                                  .target = "foo",
+                                  .args{
+                                      {
+                                          starlark::Identifier{"bar"},
+                                          starlark::Identifier{"baz"},
+                                      },
+                                      {
+                                          std::nullopt,
+                                          starlark::CallExpr{
+                                              .target = "qux",
+                                              .args{},
+                                          },
+                                      },
+                                  },
+                              },
+                          },
+                      },
+                  },
+              },
+          },
       });
 
   // TODO(robinlinden): Return error codes from parser and use that here.
@@ -95,9 +122,6 @@ int main() {
           // CallExpr
           // Missing closing parenthesis.
           R"(foo(bar = "baz", "qux")",
-          // TODO(robinlinden): Fix.
-          // Argument value is not a string literal.
-          R"(foo(bar = baz, "qux"))",
       });
 
   etest::Suite s{};

@@ -186,7 +186,7 @@ private:
         }
       }
 
-      auto const &token = *maybe_token;
+      auto &token = *maybe_token;
 
       if (auto *punc = std::get_if<token::Punctuator>(&token);
           punc != nullptr && *punc == token::Punctuator::RParen) {
@@ -214,30 +214,28 @@ private:
             return std::nullopt;
           }
 
-          // TODO(robinlinden): Parse expression.
-          if (auto *sl = std::get_if<token::StringLiteral>(&*value_token)) {
-            expr = StringLiteral{.value = std::move(sl->value)};
-            continue;
+          auto value_expr = parse_expression(*value_token);
+          if (!value_expr) {
+            std::cerr << "Failed to parse expression for argument value.\n";
+            return std::nullopt;
           }
 
-          std::cerr << "Expected string literal as argument value, got "
-                    << to_string(*value_token) << ".\n";
-          return std::nullopt;
+          expr = std::move(*value_expr);
+          continue;
         }
 
+        // Not a named argument, fall through to regular arg handling.
         reconsume(std::move(*next));
-        expr = Identifier{.name = std::move(ident->name)};
-        continue;
       }
 
-      if (auto *sl = std::get_if<token::StringLiteral>(&token)) {
-        expr = StringLiteral{.value = std::move(sl->value)};
-        continue;
+      auto value_expr = parse_expression(token);
+      if (!value_expr) {
+        std::cerr << "Failed to parse expression for argument value.\n";
+        return std::nullopt;
       }
 
-      std::cerr << "Unexpected token in argument list: " << to_string(token)
-                << ".\n";
-      return std::nullopt;
+      expr = std::move(*value_expr);
+      continue;
     }
 
     return args;
