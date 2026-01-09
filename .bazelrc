@@ -13,7 +13,7 @@ test --test_verbose_timeout_warnings
 # =========================================================
 
 build:linux --cxxopt=-std=c++2b
-build:windows --cxxopt=-std:c++latest
+build:windows --cxxopt=-std:c++23preview
 build:windows --features=-default_cpp_std
 
 # Sanitizer options
