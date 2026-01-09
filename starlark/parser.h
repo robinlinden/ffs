@@ -80,14 +80,6 @@ public:
         return program;
       }
 
-      if (auto *sl = std::get_if<token::StringLiteral>(&token)) {
-        program.statements.push_back(ExpressionStmt{
-            .expr = StringLiteral{.value = std::move(sl->value)},
-        });
-
-        continue;
-      }
-
       if (auto const *kw = std::get_if<token::Keyword>(&token)) {
         if (*kw == token::Keyword::Load) {
           auto load = parse_load_stmt();
@@ -104,37 +96,8 @@ public:
         break;
       }
 
-      if (auto const *ident = std::get_if<token::Identifier>(&token)) {
-        auto next = next_token();
-        if (!next) {
-          // This is fine.
-        } else if (auto const *punc = std::get_if<token::Punctuator>(&*next);
-                   punc != nullptr && *punc == token::Punctuator::LParen) {
-          auto args = parse_argument_list();
-          if (!args) {
-            std::cerr << "Failed to parse argument list.\n";
-            return std::nullopt;
-          }
-
-          program.statements.push_back(ExpressionStmt{
-              .expr =
-                  CallExpr{
-                      .target = std::move(ident->name),
-                      .args = std::move(*args),
-                  },
-          });
-
-          continue;
-        }
-
-        if (next) {
-          reconsume(std::move(*next));
-        }
-
-        program.statements.push_back(ExpressionStmt{
-            .expr = Identifier{.name = std::move(ident->name)},
-        });
-
+      if (auto expr = parse_expression(token); expr.has_value()) {
+        program.statements.push_back(ExpressionStmt{.expr = std::move(*expr)});
         continue;
       }
 
@@ -158,6 +121,41 @@ private:
   }
 
   void reconsume(Token token) { peeked_token_ = std::move(token); }
+
+  std::optional<Expression> parse_expression(Token &token) {
+    if (auto const *ident = std::get_if<token::Identifier>(&token)) {
+      auto next = next_token();
+      if (!next) {
+        // This is fine.
+      } else if (auto const *punc = std::get_if<token::Punctuator>(&*next);
+                 punc != nullptr && *punc == token::Punctuator::LParen) {
+        auto args = parse_argument_list();
+        if (!args) {
+          std::cerr << "Failed to parse argument list.\n";
+          return std::nullopt;
+        }
+
+        return CallExpr{
+            .target = std::move(ident->name),
+            .args = std::move(*args),
+        };
+      }
+
+      if (next) {
+        reconsume(std::move(*next));
+      }
+
+      return Identifier{.name = std::move(ident->name)};
+    }
+
+    if (auto *sl = std::get_if<token::StringLiteral>(&token)) {
+      return StringLiteral{.value = std::move(sl->value)};
+    }
+
+    std::cerr << "Unexpected token in expression: " << to_string(token)
+              << ".\n";
+    return std::nullopt;
+  }
 
   std::optional<std::vector<Argument>> parse_argument_list() {
     std::vector<Argument> args;
