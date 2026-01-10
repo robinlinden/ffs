@@ -26,6 +26,8 @@ jobs:
             os: ubuntu-24.04
             cc: clang-18
             cxx: clang++-18
+            fuzz: true
+            bzlopts: "--config libfuzzer --config asan --config ubsan"
 
           - name: windows-msvc
             os: windows-2025
@@ -34,7 +36,9 @@ jobs:
       - run: echo "CC=${{ matrix.cc }}" >>$GITHUB_ENV && echo "CXX=${{ matrix.cxx }}" >>$GITHUB_ENV
         if: ${{ matrix.cc != '' }}
       - uses: actions/checkout@v6
-      - run: bazel test ...
+      - run: bazel test ... ${{ matrix.bzlopts }}
+      - run: ./bzl/run_fuzz_tests ... ${{ matrix.bzlopts }} -- --timeout_secs=30
+        if: ${{ matrix.fuzz }}
 
   pre-commit:
     runs-on: ubuntu-24.04
