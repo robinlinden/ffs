@@ -8,7 +8,6 @@
 #include "starlark/token.h"
 #include "starlark/tokenizer.h"
 
-#include <cassert>
 #include <iostream>
 #include <optional>
 #include <string>
@@ -30,8 +29,9 @@ struct Identifier {
 };
 
 struct CallExpr;
+struct ListExpr;
 
-using Expression = std::variant<CallExpr, StringLiteral, Identifier>;
+using Expression = std::variant<CallExpr, StringLiteral, Identifier, ListExpr>;
 
 struct Argument;
 
@@ -39,6 +39,11 @@ struct CallExpr {
   std::string target;
   std::vector<Argument> args;
   constexpr bool operator==(CallExpr const &) const = default;
+};
+
+struct ListExpr {
+  std::vector<Expression> elements;
+  constexpr bool operator==(ListExpr const &) const = default;
 };
 
 struct Argument {
@@ -150,6 +155,55 @@ private:
 
     if (auto *sl = std::get_if<token::StringLiteral>(&token)) {
       return StringLiteral{.value = std::move(sl->value)};
+    }
+
+    if (auto *punct = std::get_if<token::Punctuator>(&token);
+        punct != nullptr && *punct == token::Punctuator::LBracket) {
+      std::vector<Expression> elements;
+      while (true) {
+        auto maybe_token = next_token();
+        if (!maybe_token) {
+          std::cerr << "Tokenization error in list expression.\n";
+          return std::nullopt;
+        }
+
+        auto &t = *maybe_token;
+
+        if (auto *punc = std::get_if<token::Punctuator>(&t);
+            punc != nullptr && *punc == token::Punctuator::RBracket) {
+          break;
+        }
+
+        auto element_expr = parse_expression(t);
+        if (!element_expr) {
+          std::cerr << "Failed to parse expression for list element.\n";
+          return std::nullopt;
+        }
+
+        elements.push_back(std::move(*element_expr));
+
+        auto maybe_next = next_token();
+        if (!maybe_next) {
+          std::cerr << "Tokenization error in list expression.\n";
+          return std::nullopt;
+        }
+
+        auto const &next_token = *maybe_next;
+        if (auto *punc = std::get_if<token::Punctuator>(&next_token);
+            punc != nullptr) {
+          if (*punc == token::Punctuator::Comma) {
+            continue;
+          } else if (*punc == token::Punctuator::RBracket) {
+            break;
+          }
+        }
+
+        std::cerr << "Expected ',' or ']' in list expression, got "
+                  << to_string(next_token) << ".\n";
+        return std::nullopt;
+      }
+
+      return ListExpr{.elements = std::move(elements)};
     }
 
     std::cerr << "Unexpected token in expression: " << to_string(token)

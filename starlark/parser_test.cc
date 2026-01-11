@@ -114,6 +114,27 @@ int main() {
                   },
               },
           },
+          {
+              R"(["foo", bar, baz()])",
+              starlark::Program{
+                  .statements{
+                      starlark::ExpressionStmt{
+                          .expr{
+                              starlark::ListExpr{
+                                  .elements{
+                                      starlark::StringLiteral{"foo"},
+                                      starlark::Identifier{"bar"},
+                                      starlark::CallExpr{
+                                          .target = "baz",
+                                          .args{},
+                                      },
+                                  },
+                              },
+                          },
+                      },
+                  },
+              },
+          },
       });
 
   // TODO(robinlinden): Return error codes from parser and use that here.
@@ -122,6 +143,16 @@ int main() {
           // CallExpr
           // Missing closing parenthesis.
           R"(foo(bar = "baz", "qux")",
+
+          // ListExpr
+          // Tokenization error.
+          R"([")",
+          // Parse error in element.
+          R"([not)",
+          // Tokenization error after element.
+          R"(["foo" ")",
+          // Unexpected token after element.
+          R"(["foo" foo])",
       });
 
   etest::Suite s{};
