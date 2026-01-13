@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2025 Robin Lindén <dev@robinlinden.eu>
+// SPDX-FileCopyrightText: 2025-2026 Robin Lindén <dev@robinlinden.eu>
 //
 // SPDX-License-Identifier: BSD-2-Clause
 
@@ -155,50 +155,49 @@ private:
   }
 
   std::optional<Token> tokenize_punctuator() {
-    static constexpr auto kPunctuators = [] {
-      auto punctuators =
-          std::to_array<std::pair<std::string_view, token::Punctuator>>({
-              {"+", token::Punctuator::Plus},
-              {"-", token::Punctuator::Minus},
-              {"*", token::Punctuator::Star},
-              {"/", token::Punctuator::Slash},
-              {"//", token::Punctuator::DoubleSlash},
-              {"%", token::Punctuator::Percent},
-              {"**", token::Punctuator::DoubleStar},
-              {"&", token::Punctuator::Ampersand},
-              {"|", token::Punctuator::Pipe},
-              {"^", token::Punctuator::Caret},
-              {"<<", token::Punctuator::LShift},
-              {">>", token::Punctuator::RShift},
-              {".", token::Punctuator::Dot},
-              {",", token::Punctuator::Comma},
-              {"=", token::Punctuator::Equals},
-              {";", token::Punctuator::Semicolon},
-              {":", token::Punctuator::Colon},
-              {"(", token::Punctuator::LParen},
-              {")", token::Punctuator::RParen},
-              {"[", token::Punctuator::LBracket},
-              {"]", token::Punctuator::RBracket},
-              {"{", token::Punctuator::LBrace},
-              {"}", token::Punctuator::RBrace},
-              {"<", token::Punctuator::Less},
-              {">", token::Punctuator::Greater},
-              {"==", token::Punctuator::EqualEqual},
-              {"!=", token::Punctuator::NotEqual},
-              {"+=", token::Punctuator::PlusEquals},
-              {"-=", token::Punctuator::MinusEquals},
-              {"*=", token::Punctuator::StarEquals},
-              {"/=", token::Punctuator::SlashEquals},
-              {"%=", token::Punctuator::PercentEquals},
-              {"~", token::Punctuator::Tilde},
-              {"&=", token::Punctuator::AmpersandEquals},
-              {"|=", token::Punctuator::PipeEquals},
-              {"^=", token::Punctuator::CaretEquals},
-              {"<=", token::Punctuator::LessOrEqual},
-              {"<<=", token::Punctuator::LShiftEquals},
-              {">=", token::Punctuator::GreaterOrEqual},
-              {">>=", token::Punctuator::RShiftEquals},
-          });
+    static const auto puncts = [] {
+      auto punctuators = std::to_array<std::pair<std::string_view, Token>>({
+          {"+", token::Plus{}},
+          {"-", token::Minus{}},
+          {"*", token::Star{}},
+          {"/", token::Slash{}},
+          {"//", token::DoubleSlash{}},
+          {"%", token::Percent{}},
+          {"**", token::DoubleStar{}},
+          {"&", token::Ampersand{}},
+          {"|", token::Pipe{}},
+          {"^", token::Caret{}},
+          {"<<", token::LShift{}},
+          {">>", token::RShift{}},
+          {".", token::Dot{}},
+          {",", token::Comma{}},
+          {"=", token::Equals{}},
+          {";", token::Semicolon{}},
+          {":", token::Colon{}},
+          {"(", token::LParen{}},
+          {")", token::RParen{}},
+          {"[", token::LBracket{}},
+          {"]", token::RBracket{}},
+          {"{", token::LBrace{}},
+          {"}", token::RBrace{}},
+          {"<", token::Less{}},
+          {">", token::Greater{}},
+          {"==", token::EqualEqual{}},
+          {"!=", token::NotEqual{}},
+          {"+=", token::PlusEquals{}},
+          {"-=", token::MinusEquals{}},
+          {"*=", token::StarEquals{}},
+          {"/=", token::SlashEquals{}},
+          {"%=", token::PercentEquals{}},
+          {"~", token::Tilde{}},
+          {"&=", token::AmpersandEquals{}},
+          {"|=", token::PipeEquals{}},
+          {"^=", token::CaretEquals{}},
+          {"<=", token::LessOrEqual{}},
+          {"<<=", token::LShiftEquals{}},
+          {">=", token::GreaterOrEqual{}},
+          {">>=", token::RShiftEquals{}},
+      });
 
       // Sort by length descending to ensure longer punctuators are matched
       // first.
@@ -210,7 +209,7 @@ private:
       return punctuators;
     }();
 
-    for (const auto &[str, punctuator] : kPunctuators) {
+    for (const auto &[str, punctuator] : puncts) {
       if (input_.substr(pos_, str.size()) == str) {
         pos_ += str.size();
         return punctuator;

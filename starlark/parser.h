@@ -132,8 +132,7 @@ private:
       auto next = next_token();
       if (!next) {
         // This is fine.
-      } else if (auto const *punc = std::get_if<token::Punctuator>(&*next);
-                 punc != nullptr && *punc == token::Punctuator::LParen) {
+      } else if (std::holds_alternative<token::LParen>(*next)) {
         auto args = parse_argument_list();
         if (!args) {
           std::cerr << "Failed to parse argument list.\n";
@@ -157,8 +156,7 @@ private:
       return StringLiteral{.value = std::move(sl->value)};
     }
 
-    if (auto *punct = std::get_if<token::Punctuator>(&token);
-        punct != nullptr && *punct == token::Punctuator::LBracket) {
+    if (std::holds_alternative<token::LBracket>(token)) {
       std::vector<Expression> elements;
       while (true) {
         auto maybe_token = next_token();
@@ -169,8 +167,7 @@ private:
 
         auto &t = *maybe_token;
 
-        if (auto *punc = std::get_if<token::Punctuator>(&t);
-            punc != nullptr && *punc == token::Punctuator::RBracket) {
+        if (std::holds_alternative<token::RBracket>(t)) {
           break;
         }
 
@@ -189,13 +186,12 @@ private:
         }
 
         auto const &next_token = *maybe_next;
-        if (auto *punc = std::get_if<token::Punctuator>(&next_token);
-            punc != nullptr) {
-          if (*punc == token::Punctuator::Comma) {
-            continue;
-          } else if (*punc == token::Punctuator::RBracket) {
-            break;
-          }
+        if (std::holds_alternative<token::RBracket>(next_token)) {
+          break;
+        }
+
+        if (std::holds_alternative<token::Comma>(next_token)) {
+          continue;
         }
 
         std::cerr << "Expected ',' or ']' in list expression, got "
@@ -223,15 +219,14 @@ private:
 
       if (!args.empty()) {
         auto const &token = *maybe_token;
-        auto const *punc = std::get_if<token::Punctuator>(&token);
-        if (punc == nullptr || (*punc != token::Punctuator::Comma &&
-                                *punc != token::Punctuator::RParen)) {
+        if (!std::holds_alternative<token::Comma>(token) &&
+            !std::holds_alternative<token::RParen>(token)) {
           std::cerr << "Expected ',' or ')' in argument list, got "
                     << to_string(token) << ".\n";
           return std::nullopt;
         }
 
-        if (*punc == token::Punctuator::Comma) {
+        if (std::holds_alternative<token::Comma>(token)) {
           maybe_token = next_token();
           if (!maybe_token) {
             std::cerr << "Unexpected end of input in argument list.\n";
@@ -242,8 +237,7 @@ private:
 
       auto &token = *maybe_token;
 
-      if (auto *punc = std::get_if<token::Punctuator>(&token);
-          punc != nullptr && *punc == token::Punctuator::RParen) {
+      if (std::holds_alternative<token::RParen>(token)) {
         break;
       }
 
@@ -258,8 +252,7 @@ private:
           return std::nullopt;
         }
 
-        if (auto *eq = std::get_if<token::Punctuator>(&*next);
-            eq != nullptr && *eq == token::Punctuator::Equals) {
+        if (std::holds_alternative<token::Equals>(*next)) {
           name = Identifier{.name = std::move(ident->name)};
 
           auto value_token = next_token();
@@ -299,8 +292,7 @@ private:
   std::optional<LoadStmt> parse_load_stmt() {
     // load was consumed by the caller.
     if (auto lparen = next_token();
-        !lparen || !std::holds_alternative<token::Punctuator>(*lparen) ||
-        std::get<token::Punctuator>(*lparen) != token::Punctuator::LParen) {
+        !lparen || !std::holds_alternative<token::LParen>(*lparen)) {
       std::cerr << "Expected '(' after 'load'.\n";
       return std::nullopt;
     }
@@ -321,21 +313,13 @@ private:
         return std::nullopt;
       }
 
-      auto const *comma_or_rparen =
-          std::get_if<token::Punctuator>(&*maybe_comma_or_rparen);
-      if (comma_or_rparen == nullptr) {
-        std::cerr << "Expected ',' or ')' in load statement, got "
-                  << to_string(*maybe_comma_or_rparen) << ".\n";
-        return std::nullopt;
-      }
-
-      if (*comma_or_rparen == token::Punctuator::RParen) {
+      if (std::holds_alternative<token::RParen>(*maybe_comma_or_rparen)) {
         break;
       }
 
-      if (*comma_or_rparen != token::Punctuator::Comma) {
+      if (!std::holds_alternative<token::Comma>(*maybe_comma_or_rparen)) {
         std::cerr << "Expected ',' or ')' in load statement, got "
-                  << to_string(*comma_or_rparen) << ".\n";
+                  << to_string(*maybe_comma_or_rparen) << ".\n";
         return std::nullopt;
       }
 
@@ -357,7 +341,7 @@ private:
         return std::nullopt;
       }
 
-      if (!expect_next_token(token::Punctuator::Equals)) {
+      if (!expect_next_token(token::Equals{})) {
         return std::nullopt;
       }
 
