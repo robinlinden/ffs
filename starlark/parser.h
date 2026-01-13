@@ -19,13 +19,13 @@
 namespace starlark {
 
 struct StringLiteral {
-  std::string value;
-  constexpr bool operator==(StringLiteral const &) const = default;
+    std::string value;
+    constexpr bool operator==(StringLiteral const &) const = default;
 };
 
 struct Identifier {
-  std::string name;
-  constexpr bool operator==(Identifier const &) const = default;
+    std::string name;
+    constexpr bool operator==(Identifier const &) const = default;
 };
 
 struct CallExpr;
@@ -36,370 +36,363 @@ using Expression = std::variant<CallExpr, StringLiteral, Identifier, ListExpr>;
 struct Argument;
 
 struct CallExpr {
-  std::string target;
-  std::vector<Argument> args;
-  constexpr bool operator==(CallExpr const &) const = default;
+    std::string target;
+    std::vector<Argument> args;
+    constexpr bool operator==(CallExpr const &) const = default;
 };
 
 struct ListExpr {
-  std::vector<Expression> elements;
-  constexpr bool operator==(ListExpr const &) const = default;
+    std::vector<Expression> elements;
+    constexpr bool operator==(ListExpr const &) const = default;
 };
 
 struct Argument {
-  std::optional<Identifier> name;
-  Expression expr;
-  constexpr bool operator==(Argument const &) const = default;
+    std::optional<Identifier> name;
+    Expression expr;
+    constexpr bool operator==(Argument const &) const = default;
 };
 
 struct ExpressionStmt {
-  Expression expr;
-  constexpr bool operator==(ExpressionStmt const &) const = default;
+    Expression expr;
+    constexpr bool operator==(ExpressionStmt const &) const = default;
 };
 
 struct LoadStmt {
-  std::string module_name;
-  std::vector<std::pair<std::string, std::string>> symbols;
-  constexpr bool operator==(LoadStmt const &) const = default;
+    std::string module_name;
+    std::vector<std::pair<std::string, std::string>> symbols;
+    constexpr bool operator==(LoadStmt const &) const = default;
 };
 
 using Statement = std::variant<LoadStmt, ExpressionStmt>;
 
 struct Program {
-  std::vector<Statement> statements;
-  constexpr bool operator==(Program const &) const = default;
+    std::vector<Statement> statements;
+    constexpr bool operator==(Program const &) const = default;
 };
 
 class Parser {
-public:
-  explicit Parser(std::string_view input) : tokenizer_{input} {}
+  public:
+    explicit Parser(std::string_view input) : tokenizer_{input} {}
 
-  std::optional<Program> parse() {
-    Program program;
+    std::optional<Program> parse() {
+        Program program;
 
-    for (auto maybe_token = next_token(); maybe_token;
-         maybe_token = next_token()) {
-      auto &token = *maybe_token;
+        for (auto maybe_token = next_token(); maybe_token; maybe_token = next_token()) {
+            auto &token = *maybe_token;
 
-      if (std::holds_alternative<token::Eof>(token)) {
-        return program;
-      }
+            if (std::holds_alternative<token::Eof>(token)) {
+                return program;
+            }
 
-      if (auto const *kw = std::get_if<token::Keyword>(&token)) {
-        if (*kw == token::Keyword::Load) {
-          auto load = parse_load_stmt();
-          if (!load) {
-            std::cerr << "Failed to parse load statement.\n";
+            if (auto const *kw = std::get_if<token::Keyword>(&token)) {
+                if (*kw == token::Keyword::Load) {
+                    auto load = parse_load_stmt();
+                    if (!load) {
+                        std::cerr << "Failed to parse load statement.\n";
+                        return std::nullopt;
+                    }
+
+                    program.statements.push_back(std::move(*load));
+                    continue;
+                }
+
+                std::cerr << "Unexpected keyword: " << to_string(*kw) << '\n';
+                break;
+            }
+
+            if (auto expr = parse_expression(token); expr.has_value()) {
+                program.statements.push_back(ExpressionStmt{.expr = std::move(*expr)});
+                continue;
+            }
+
+            std::cerr << "Unexpected token: " << to_string(token) << '\n';
             return std::nullopt;
-          }
-
-          program.statements.push_back(std::move(*load));
-          continue;
         }
 
-        std::cerr << "Unexpected keyword: " << to_string(*kw) << '\n';
-        break;
-      }
-
-      if (auto expr = parse_expression(token); expr.has_value()) {
-        program.statements.push_back(ExpressionStmt{.expr = std::move(*expr)});
-        continue;
-      }
-
-      std::cerr << "Unexpected token: " << to_string(token) << '\n';
-      return std::nullopt;
-    }
-
-    return std::nullopt;
-  }
-
-private:
-  Tokenizer tokenizer_;
-  std::optional<Token> peeked_token_;
-
-  std::optional<Token> next_token() {
-    if (peeked_token_) {
-      return std::exchange(peeked_token_, std::nullopt);
-    }
-
-    return tokenizer_.tokenize();
-  }
-
-  void reconsume(Token token) { peeked_token_ = std::move(token); }
-
-  std::optional<Expression> parse_expression(Token &token) {
-    if (auto const *ident = std::get_if<token::Identifier>(&token)) {
-      auto next = next_token();
-      if (!next) {
-        // This is fine.
-      } else if (std::holds_alternative<token::LParen>(*next)) {
-        auto args = parse_argument_list();
-        if (!args) {
-          std::cerr << "Failed to parse argument list.\n";
-          return std::nullopt;
-        }
-
-        return CallExpr{
-            .target = std::move(ident->name),
-            .args = std::move(*args),
-        };
-      }
-
-      if (next) {
-        reconsume(std::move(*next));
-      }
-
-      return Identifier{.name = std::move(ident->name)};
-    }
-
-    if (auto *sl = std::get_if<token::StringLiteral>(&token)) {
-      return StringLiteral{.value = std::move(sl->value)};
-    }
-
-    if (std::holds_alternative<token::LBracket>(token)) {
-      std::vector<Expression> elements;
-      while (true) {
-        auto maybe_token = next_token();
-        if (!maybe_token) {
-          std::cerr << "Tokenization error in list expression.\n";
-          return std::nullopt;
-        }
-
-        auto &t = *maybe_token;
-
-        if (std::holds_alternative<token::RBracket>(t)) {
-          break;
-        }
-
-        auto element_expr = parse_expression(t);
-        if (!element_expr) {
-          std::cerr << "Failed to parse expression for list element.\n";
-          return std::nullopt;
-        }
-
-        elements.push_back(std::move(*element_expr));
-
-        auto maybe_next = next_token();
-        if (!maybe_next) {
-          std::cerr << "Tokenization error in list expression.\n";
-          return std::nullopt;
-        }
-
-        auto const &next_token = *maybe_next;
-        if (std::holds_alternative<token::RBracket>(next_token)) {
-          break;
-        }
-
-        if (std::holds_alternative<token::Comma>(next_token)) {
-          continue;
-        }
-
-        std::cerr << "Expected ',' or ']' in list expression, got "
-                  << to_string(next_token) << ".\n";
         return std::nullopt;
-      }
-
-      return ListExpr{.elements = std::move(elements)};
     }
 
-    std::cerr << "Unexpected token in expression: " << to_string(token)
-              << ".\n";
-    return std::nullopt;
-  }
+  private:
+    Tokenizer tokenizer_;
+    std::optional<Token> peeked_token_;
 
-  std::optional<std::vector<Argument>> parse_argument_list() {
-    std::vector<Argument> args;
-
-    while (true) {
-      auto maybe_token = next_token();
-      if (!maybe_token) {
-        std::cerr << "Unexpected end of input in argument list.\n";
-        return std::nullopt;
-      }
-
-      if (!args.empty()) {
-        auto const &token = *maybe_token;
-        if (!std::holds_alternative<token::Comma>(token) &&
-            !std::holds_alternative<token::RParen>(token)) {
-          std::cerr << "Expected ',' or ')' in argument list, got "
-                    << to_string(token) << ".\n";
-          return std::nullopt;
+    std::optional<Token> next_token() {
+        if (peeked_token_) {
+            return std::exchange(peeked_token_, std::nullopt);
         }
 
-        if (std::holds_alternative<token::Comma>(token)) {
-          maybe_token = next_token();
-          if (!maybe_token) {
-            std::cerr << "Unexpected end of input in argument list.\n";
+        return tokenizer_.tokenize();
+    }
+
+    void reconsume(Token token) { peeked_token_ = std::move(token); }
+
+    std::optional<Expression> parse_expression(Token &token) {
+        if (auto const *ident = std::get_if<token::Identifier>(&token)) {
+            auto next = next_token();
+            if (!next) {
+                // This is fine.
+            } else if (std::holds_alternative<token::LParen>(*next)) {
+                auto args = parse_argument_list();
+                if (!args) {
+                    std::cerr << "Failed to parse argument list.\n";
+                    return std::nullopt;
+                }
+
+                return CallExpr{
+                    .target = std::move(ident->name),
+                    .args = std::move(*args),
+                };
+            }
+
+            if (next) {
+                reconsume(std::move(*next));
+            }
+
+            return Identifier{.name = std::move(ident->name)};
+        }
+
+        if (auto *sl = std::get_if<token::StringLiteral>(&token)) {
+            return StringLiteral{.value = std::move(sl->value)};
+        }
+
+        if (std::holds_alternative<token::LBracket>(token)) {
+            std::vector<Expression> elements;
+            while (true) {
+                auto maybe_token = next_token();
+                if (!maybe_token) {
+                    std::cerr << "Tokenization error in list expression.\n";
+                    return std::nullopt;
+                }
+
+                auto &t = *maybe_token;
+
+                if (std::holds_alternative<token::RBracket>(t)) {
+                    break;
+                }
+
+                auto element_expr = parse_expression(t);
+                if (!element_expr) {
+                    std::cerr << "Failed to parse expression for list element.\n";
+                    return std::nullopt;
+                }
+
+                elements.push_back(std::move(*element_expr));
+
+                auto maybe_next = next_token();
+                if (!maybe_next) {
+                    std::cerr << "Tokenization error in list expression.\n";
+                    return std::nullopt;
+                }
+
+                auto const &next_token = *maybe_next;
+                if (std::holds_alternative<token::RBracket>(next_token)) {
+                    break;
+                }
+
+                if (std::holds_alternative<token::Comma>(next_token)) {
+                    continue;
+                }
+
+                std::cerr << "Expected ',' or ']' in list expression, got " << to_string(next_token)
+                          << ".\n";
+                return std::nullopt;
+            }
+
+            return ListExpr{.elements = std::move(elements)};
+        }
+
+        std::cerr << "Unexpected token in expression: " << to_string(token) << ".\n";
+        return std::nullopt;
+    }
+
+    std::optional<std::vector<Argument>> parse_argument_list() {
+        std::vector<Argument> args;
+
+        while (true) {
+            auto maybe_token = next_token();
+            if (!maybe_token) {
+                std::cerr << "Unexpected end of input in argument list.\n";
+                return std::nullopt;
+            }
+
+            if (!args.empty()) {
+                auto const &token = *maybe_token;
+                if (!std::holds_alternative<token::Comma>(token) &&
+                    !std::holds_alternative<token::RParen>(token)) {
+                    std::cerr << "Expected ',' or ')' in argument list, got " << to_string(token)
+                              << ".\n";
+                    return std::nullopt;
+                }
+
+                if (std::holds_alternative<token::Comma>(token)) {
+                    maybe_token = next_token();
+                    if (!maybe_token) {
+                        std::cerr << "Unexpected end of input in argument list.\n";
+                        return std::nullopt;
+                    }
+                }
+            }
+
+            auto &token = *maybe_token;
+
+            if (std::holds_alternative<token::RParen>(token)) {
+                break;
+            }
+
+            auto &arg = args.emplace_back();
+            std::optional<Identifier> &name = arg.name;
+            Expression &expr = arg.expr;
+
+            if (auto *ident = std::get_if<token::Identifier>(&token)) {
+                auto next = next_token();
+                if (!next) {
+                    std::cerr << "Unexpected end of input in argument list.\n";
+                    return std::nullopt;
+                }
+
+                if (std::holds_alternative<token::Equals>(*next)) {
+                    name = Identifier{.name = std::move(ident->name)};
+
+                    auto value_token = next_token();
+                    if (!value_token) {
+                        std::cerr << "Unexpected end of input in argument list.\n";
+                        return std::nullopt;
+                    }
+
+                    auto value_expr = parse_expression(*value_token);
+                    if (!value_expr) {
+                        std::cerr << "Failed to parse expression for argument "
+                                     "value.\n";
+                        return std::nullopt;
+                    }
+
+                    expr = std::move(*value_expr);
+                    continue;
+                }
+
+                // Not a named argument, fall through to regular arg handling.
+                reconsume(std::move(*next));
+            }
+
+            auto value_expr = parse_expression(token);
+            if (!value_expr) {
+                std::cerr << "Failed to parse expression for argument value.\n";
+                return std::nullopt;
+            }
+
+            expr = std::move(*value_expr);
+            continue;
+        }
+
+        return args;
+    }
+
+    // LoadStmt = 'load' '(' string {',' [identifier '='] string} [','] ')' .
+    std::optional<LoadStmt> parse_load_stmt() {
+        // load was consumed by the caller.
+        if (auto lparen = next_token();
+            !lparen || !std::holds_alternative<token::LParen>(*lparen)) {
+            std::cerr << "Expected '(' after 'load'.\n";
             return std::nullopt;
-          }
         }
-      }
 
-      auto &token = *maybe_token;
+        auto module_name = next_token();
+        if (!module_name || !std::holds_alternative<token::StringLiteral>(*module_name)) {
+            std::cerr << "Expected module name in load statement.\n";
+            return std::nullopt;
+        }
 
-      if (std::holds_alternative<token::RParen>(token)) {
-        break;
-      }
+        std::vector<std::pair<std::string, std::string>> symbols;
 
-      auto &arg = args.emplace_back();
-      std::optional<Identifier> &name = arg.name;
-      Expression &expr = arg.expr;
+        while (true) {
+            auto maybe_comma_or_rparen = next_token();
+            if (!maybe_comma_or_rparen) {
+                std::cerr << "Unexpected end of input in load statement.\n";
+                return std::nullopt;
+            }
 
-      if (auto *ident = std::get_if<token::Identifier>(&token)) {
+            if (std::holds_alternative<token::RParen>(*maybe_comma_or_rparen)) {
+                break;
+            }
+
+            if (!std::holds_alternative<token::Comma>(*maybe_comma_or_rparen)) {
+                std::cerr << "Expected ',' or ')' in load statement, got "
+                          << to_string(*maybe_comma_or_rparen) << ".\n";
+                return std::nullopt;
+            }
+
+            auto maybe_ident_or_symbol = next_token();
+            if (!maybe_ident_or_symbol) {
+                std::cerr << "Unexpected end of input in load statement.\n";
+                return std::nullopt;
+            }
+
+            if (auto *symbol = std::get_if<token::StringLiteral>(&*maybe_ident_or_symbol)) {
+                auto name = symbol->value;
+                symbols.emplace_back(std::move(name), std::move(symbol->value));
+                continue;
+            }
+
+            auto *ident = std::get_if<token::Identifier>(&*maybe_ident_or_symbol);
+            if (!ident) {
+                return std::nullopt;
+            }
+
+            if (!expect_next_token(token::Equals{})) {
+                return std::nullopt;
+            }
+
+            auto symbol = next_token_as<token::StringLiteral>();
+            if (!symbol) {
+                return std::nullopt;
+            }
+
+            symbols.emplace_back(std::move(ident->name), std::move(symbol->value));
+        }
+
+        if (symbols.empty()) {
+            std::cerr << "Expected at least one symbol in load statement.\n";
+            return std::nullopt;
+        }
+
+        return LoadStmt{
+            std::move(std::get<token::StringLiteral>(*module_name).value), std::move(symbols)};
+    }
+
+    [[nodiscard]] bool expect_next_token(Token const &expected) {
         auto next = next_token();
         if (!next) {
-          std::cerr << "Unexpected end of input in argument list.\n";
-          return std::nullopt;
+            std::cerr << "Unexpected end of input, expected " << to_string(expected) << ".\n";
+            return false;
         }
 
-        if (std::holds_alternative<token::Equals>(*next)) {
-          name = Identifier{.name = std::move(ident->name)};
-
-          auto value_token = next_token();
-          if (!value_token) {
-            std::cerr << "Unexpected end of input in argument list.\n";
-            return std::nullopt;
-          }
-
-          auto value_expr = parse_expression(*value_token);
-          if (!value_expr) {
-            std::cerr << "Failed to parse expression for argument value.\n";
-            return std::nullopt;
-          }
-
-          expr = std::move(*value_expr);
-          continue;
+        if (next != expected) {
+            std::cerr << "Expected " << to_string(expected) << ", got " << to_string(*next)
+                      << ".\n";
+            return false;
         }
 
-        // Not a named argument, fall through to regular arg handling.
-        reconsume(std::move(*next));
-      }
+        return true;
+    }
 
-      auto value_expr = parse_expression(token);
-      if (!value_expr) {
-        std::cerr << "Failed to parse expression for argument value.\n";
+    template <typename T> [[nodiscard]] std::optional<T> next_token_as() {
+        auto next = next_token();
+        if (!next) {
+            std::cerr << "Unexpected end of input.\n";
+            return std::nullopt;
+        }
+
+        if (auto *t = std::get_if<T>(&*next); t != nullptr) {
+            return std::move(*t);
+        }
+
+        std::cerr << "Expected token of type " << typeid(T).name() << ", got " << to_string(*next)
+                  << ".\n";
         return std::nullopt;
-      }
-
-      expr = std::move(*value_expr);
-      continue;
     }
-
-    return args;
-  }
-
-  // LoadStmt = 'load' '(' string {',' [identifier '='] string} [','] ')' .
-  std::optional<LoadStmt> parse_load_stmt() {
-    // load was consumed by the caller.
-    if (auto lparen = next_token();
-        !lparen || !std::holds_alternative<token::LParen>(*lparen)) {
-      std::cerr << "Expected '(' after 'load'.\n";
-      return std::nullopt;
-    }
-
-    auto module_name = next_token();
-    if (!module_name ||
-        !std::holds_alternative<token::StringLiteral>(*module_name)) {
-      std::cerr << "Expected module name in load statement.\n";
-      return std::nullopt;
-    }
-
-    std::vector<std::pair<std::string, std::string>> symbols;
-
-    while (true) {
-      auto maybe_comma_or_rparen = next_token();
-      if (!maybe_comma_or_rparen) {
-        std::cerr << "Unexpected end of input in load statement.\n";
-        return std::nullopt;
-      }
-
-      if (std::holds_alternative<token::RParen>(*maybe_comma_or_rparen)) {
-        break;
-      }
-
-      if (!std::holds_alternative<token::Comma>(*maybe_comma_or_rparen)) {
-        std::cerr << "Expected ',' or ')' in load statement, got "
-                  << to_string(*maybe_comma_or_rparen) << ".\n";
-        return std::nullopt;
-      }
-
-      auto maybe_ident_or_symbol = next_token();
-      if (!maybe_ident_or_symbol) {
-        std::cerr << "Unexpected end of input in load statement.\n";
-        return std::nullopt;
-      }
-
-      if (auto *symbol =
-              std::get_if<token::StringLiteral>(&*maybe_ident_or_symbol)) {
-        auto name = symbol->value;
-        symbols.emplace_back(std::move(name), std::move(symbol->value));
-        continue;
-      }
-
-      auto *ident = std::get_if<token::Identifier>(&*maybe_ident_or_symbol);
-      if (!ident) {
-        return std::nullopt;
-      }
-
-      if (!expect_next_token(token::Equals{})) {
-        return std::nullopt;
-      }
-
-      auto symbol = next_token_as<token::StringLiteral>();
-      if (!symbol) {
-        return std::nullopt;
-      }
-
-      symbols.emplace_back(std::move(ident->name), std::move(symbol->value));
-    }
-
-    if (symbols.empty()) {
-      std::cerr << "Expected at least one symbol in load statement.\n";
-      return std::nullopt;
-    }
-
-    return LoadStmt{
-        std::move(std::get<token::StringLiteral>(*module_name).value),
-        std::move(symbols)};
-  }
-
-  [[nodiscard]] bool expect_next_token(Token const &expected) {
-    auto next = next_token();
-    if (!next) {
-      std::cerr << "Unexpected end of input, expected " << to_string(expected)
-                << ".\n";
-      return false;
-    }
-
-    if (next != expected) {
-      std::cerr << "Expected " << to_string(expected) << ", got "
-                << to_string(*next) << ".\n";
-      return false;
-    }
-
-    return true;
-  }
-
-  template <typename T> [[nodiscard]] std::optional<T> next_token_as() {
-    auto next = next_token();
-    if (!next) {
-      std::cerr << "Unexpected end of input.\n";
-      return std::nullopt;
-    }
-
-    if (auto *t = std::get_if<T>(&*next); t != nullptr) {
-      return std::move(*t);
-    }
-
-    std::cerr << "Expected token of type " << typeid(T).name() << ", got "
-              << to_string(*next) << ".\n";
-    return std::nullopt;
-  }
 };
 
-inline std::optional<Program> parse(std::string_view input) {
-  return Parser{input}.parse();
-}
+inline std::optional<Program> parse(std::string_view input) { return Parser{input}.parse(); }
 
 } // namespace starlark
 
