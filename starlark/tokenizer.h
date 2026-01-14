@@ -118,35 +118,35 @@ class Tokenizer {
 
         auto name = input_.substr(start, pos_ - start);
         if (name == "and")
-            return token::Keyword::And;
+            return token::And{};
         if (name == "else")
-            return token::Keyword::Else;
+            return token::Else{};
         if (name == "load")
-            return token::Keyword::Load;
+            return token::Load{};
         if (name == "break")
-            return token::Keyword::Break;
+            return token::Break{};
         if (name == "for")
-            return token::Keyword::For;
+            return token::For{};
         if (name == "not")
-            return token::Keyword::Not;
+            return token::Not{};
         if (name == "continue")
-            return token::Keyword::Continue;
+            return token::Continue{};
         if (name == "if")
-            return token::Keyword::If;
+            return token::If{};
         if (name == "or")
-            return token::Keyword::Or;
+            return token::Or{};
         if (name == "def")
-            return token::Keyword::Def;
+            return token::Def{};
         if (name == "in")
-            return token::Keyword::In;
+            return token::In{};
         if (name == "pass")
-            return token::Keyword::Pass;
+            return token::Pass{};
         if (name == "elif")
-            return token::Keyword::Elif;
+            return token::Elif{};
         if (name == "lambda")
-            return token::Keyword::Lambda;
+            return token::Lambda{};
         if (name == "return")
-            return token::Keyword::Return;
+            return token::Return{};
 
         return token::Identifier{std::string{name}};
     }

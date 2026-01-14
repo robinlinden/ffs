@@ -228,60 +228,81 @@ constexpr std::string_view to_string(CaretEquals) { return "^="; }
 constexpr std::string_view to_string(LShiftEquals) { return "<<="; }
 constexpr std::string_view to_string(RShiftEquals) { return ">>="; }
 
-enum class Keyword {
-    And,      // and
-    Else,     // else
-    Load,     // load
-    Break,    // break
-    For,      // for
-    Not,      // not
-    Continue, // continue
-    If,       // if
-    Or,       // or
-    Def,      // def
-    In,       // in
-    Pass,     // pass
-    Elif,     // elif
-    Lambda,   // lambda
-    Return    // return
+struct And {
+    constexpr bool operator==(And const &) const = default;
 };
 
-constexpr std::string_view to_string(Keyword k) {
-    switch (k) {
-    case Keyword::And:
-        return "and";
-    case Keyword::Else:
-        return "else";
-    case Keyword::Load:
-        return "load";
-    case Keyword::Break:
-        return "break";
-    case Keyword::For:
-        return "for";
-    case Keyword::Not:
-        return "not";
-    case Keyword::Continue:
-        return "continue";
-    case Keyword::If:
-        return "if";
-    case Keyword::Or:
-        return "or";
-    case Keyword::Def:
-        return "def";
-    case Keyword::In:
-        return "in";
-    case Keyword::Pass:
-        return "pass";
-    case Keyword::Elif:
-        return "elif";
-    case Keyword::Lambda:
-        return "lambda";
-    case Keyword::Return:
-        return "return";
-    }
+struct Else {
+    constexpr bool operator==(Else const &) const = default;
+};
 
-    return "<unknown>";
-}
+struct Load {
+    constexpr bool operator==(Load const &) const = default;
+};
+
+struct Break {
+    constexpr bool operator==(Break const &) const = default;
+};
+
+struct For {
+    constexpr bool operator==(For const &) const = default;
+};
+
+struct Not {
+    constexpr bool operator==(Not const &) const = default;
+};
+
+struct Continue {
+    constexpr bool operator==(Continue const &) const = default;
+};
+
+struct If {
+    constexpr bool operator==(If const &) const = default;
+};
+
+struct Or {
+    constexpr bool operator==(Or const &) const = default;
+};
+
+struct Def {
+    constexpr bool operator==(Def const &) const = default;
+};
+
+struct In {
+    constexpr bool operator==(In const &) const = default;
+};
+
+struct Pass {
+    constexpr bool operator==(Pass const &) const = default;
+};
+
+struct Elif {
+    constexpr bool operator==(Elif const &) const = default;
+};
+
+struct Lambda {
+    constexpr bool operator==(Lambda const &) const = default;
+};
+
+struct Return {
+    constexpr bool operator==(Return const &) const = default;
+};
+
+constexpr std::string_view to_string(And) { return "and"; }
+constexpr std::string_view to_string(Else) { return "else"; }
+constexpr std::string_view to_string(Load) { return "load"; }
+constexpr std::string_view to_string(Break) { return "break"; }
+constexpr std::string_view to_string(For) { return "for"; }
+constexpr std::string_view to_string(Not) { return "not"; }
+constexpr std::string_view to_string(Continue) { return "continue"; }
+constexpr std::string_view to_string(If) { return "if"; }
+constexpr std::string_view to_string(Or) { return "or"; }
+constexpr std::string_view to_string(Def) { return "def"; }
+constexpr std::string_view to_string(In) { return "in"; }
+constexpr std::string_view to_string(Pass) { return "pass"; }
+constexpr std::string_view to_string(Elif) { return "elif"; }
+constexpr std::string_view to_string(Lambda) { return "lambda"; }
+constexpr std::string_view to_string(Return) { return "return"; }
 
 struct Identifier {
     std::string name;
@@ -347,7 +368,21 @@ using Token = std::variant<
     token::CaretEquals,
     token::LShiftEquals,
     token::RShiftEquals,
-    token::Keyword,
+    token::And,
+    token::Else,
+    token::Load,
+    token::Break,
+    token::For,
+    token::Not,
+    token::Continue,
+    token::If,
+    token::Or,
+    token::Def,
+    token::In,
+    token::Pass,
+    token::Elif,
+    token::Lambda,
+    token::Return,
     token::Identifier,
     token::StringLiteral,
     token::Eof>;

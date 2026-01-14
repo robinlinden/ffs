@@ -84,20 +84,15 @@ class Parser {
                 return program;
             }
 
-            if (auto const *kw = std::get_if<token::Keyword>(&token)) {
-                if (*kw == token::Keyword::Load) {
-                    auto load = parse_load_stmt();
-                    if (!load) {
-                        std::cerr << "Failed to parse load statement.\n";
-                        return std::nullopt;
-                    }
-
-                    program.statements.push_back(std::move(*load));
-                    continue;
+            if (std::holds_alternative<token::Load>(token)) {
+                auto load = parse_load_stmt();
+                if (!load) {
+                    std::cerr << "Failed to parse load statement.\n";
+                    return std::nullopt;
                 }
 
-                std::cerr << "Unexpected keyword: " << to_string(*kw) << '\n';
-                break;
+                program.statements.push_back(std::move(*load));
+                continue;
             }
 
             if (auto expr = parse_expression(token); expr.has_value()) {
