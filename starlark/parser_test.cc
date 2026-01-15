@@ -134,6 +134,46 @@ int main() {
                 },
             },
         },
+        {
+            R"({"foo": bar, baz(): "qux"})",
+            starlark::Program{
+                .statements{
+                    starlark::ExpressionStmt{
+                        .expr{
+                            starlark::DictExpr{
+                                .entries{
+                                    {
+                                        starlark::StringLiteral{"foo"},
+                                        starlark::Identifier{"bar"},
+                                    },
+                                    {
+                                        starlark::CallExpr{
+                                            .target = "baz",
+                                            .args{},
+                                        },
+                                        starlark::StringLiteral{"qux"},
+                                    },
+                                },
+                            },
+                        },
+                    },
+                },
+            },
+        },
+        {
+            "{}",
+            starlark::Program{
+                .statements{
+                    starlark::ExpressionStmt{
+                        .expr{
+                            starlark::DictExpr{
+                                .entries{},
+                            },
+                        },
+                    },
+                },
+            },
+        },
     });
 
     // TODO(robinlinden): Return error codes from parser and use that here.
@@ -151,6 +191,22 @@ int main() {
         R"(["foo" ")",
         // Unexpected token after element.
         R"(["foo" foo])",
+
+        // DictExpr
+        // Tokenization error.
+        R"({")",
+        // Parse error in key.
+        R"({not: "value"})",
+        // Missing colon after key.
+        R"({"key" "value"})",
+        // Tokenization error in value.
+        R"({"key": ")",
+        // Parse error in value.
+        R"({"key": not})",
+        // Tokenization error after entry.
+        R"({"key": "value" ")",
+        // Unexpected token after entry.
+        R"({"key": "value" foo})",
     });
 
     etest::Suite s{};

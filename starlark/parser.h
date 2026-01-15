@@ -29,9 +29,10 @@ struct Identifier {
 };
 
 struct CallExpr;
+struct DictExpr;
 struct ListExpr;
 
-using Expression = std::variant<CallExpr, StringLiteral, Identifier, ListExpr>;
+using Expression = std::variant<CallExpr, StringLiteral, Identifier, ListExpr, DictExpr>;
 
 struct Argument;
 
@@ -39,6 +40,12 @@ struct CallExpr {
     std::string target;
     std::vector<Argument> args;
     constexpr bool operator==(CallExpr const &) const = default;
+};
+
+struct DictExpr {
+    std::vector<std::pair<Expression, Expression>> entries;
+    // Clang 18 dies if this is defaulted.
+    constexpr bool operator==(DictExpr const &) const;
 };
 
 struct ListExpr {
@@ -51,6 +58,8 @@ struct Argument {
     Expression expr;
     constexpr bool operator==(Argument const &) const = default;
 };
+
+constexpr bool DictExpr::operator==(DictExpr const &o) const { return entries == o.entries; }
 
 struct ExpressionStmt {
     Expression expr;
@@ -194,6 +203,71 @@ class Parser {
             }
 
             return ListExpr{.elements = std::move(elements)};
+        }
+
+        if (std::holds_alternative<token::LBrace>(token)) {
+            std::vector<std::pair<Expression, Expression>> entries;
+
+            while (true) {
+                auto maybe_token = next_token();
+                if (!maybe_token) {
+                    std::cerr << "Tokenization error in dict expression.\n";
+                    return std::nullopt;
+                }
+
+                auto &t = *maybe_token;
+
+                if (std::holds_alternative<token::RBrace>(t)) {
+                    break;
+                }
+
+                auto key_expr = parse_expression(t);
+                if (!key_expr) {
+                    std::cerr << "Failed to parse expression for dict key.\n";
+                    return std::nullopt;
+                }
+
+                auto colon_token = next_token();
+                if (!colon_token || !std::holds_alternative<token::Colon>(*colon_token)) {
+                    std::cerr << "Expected ':' after dict key.\n";
+                    return std::nullopt;
+                }
+
+                auto value_token = next_token();
+                if (!value_token) {
+                    std::cerr << "Unexpected end of input in dict expression.\n";
+                    return std::nullopt;
+                }
+
+                auto value_expr = parse_expression(*value_token);
+                if (!value_expr) {
+                    std::cerr << "Failed to parse expression for dict value.\n";
+                    return std::nullopt;
+                }
+
+                entries.emplace_back(std::move(*key_expr), std::move(*value_expr));
+
+                auto maybe_next = next_token();
+                if (!maybe_next) {
+                    std::cerr << "Tokenization error in dict expression.\n";
+                    return std::nullopt;
+                }
+
+                auto const &next_token = *maybe_next;
+                if (std::holds_alternative<token::RBrace>(next_token)) {
+                    break;
+                }
+
+                if (std::holds_alternative<token::Comma>(next_token)) {
+                    continue;
+                }
+
+                std::cerr << "Expected ',' or '}' in dict expression, got " << to_string(next_token)
+                          << ".\n";
+                return std::nullopt;
+            }
+
+            return DictExpr{.entries = std::move(entries)};
         }
 
         std::cerr << "Unexpected token in expression: " << to_string(token) << ".\n";
