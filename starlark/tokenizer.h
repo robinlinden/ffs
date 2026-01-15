@@ -148,6 +148,32 @@ class Tokenizer {
         if (name == "return")
             return token::Return{};
 
+        static constexpr auto kReserved = std::to_array<std::string_view>({
+            "as",
+            "global",
+            "assert",
+            "import",
+            "async",
+            "is",
+            "await",
+            "nonlocal",
+            "class",
+            "raise",
+            "del",
+            "try",
+            "except",
+            "while",
+            "finally",
+            "with",
+            "from",
+            "yield",
+        });
+
+        // TODO(robinlinden): Return nice error codes.
+        if (std::ranges::contains(kReserved, name)) {
+            return std::nullopt;
+        }
+
         return token::Identifier{std::string{name}};
     }
 

@@ -34,6 +34,8 @@ int main() {
                     t::RParen{},
                 },
             },
+            {"global", std::nullopt}, // Reserved identifier.
+            {"globalist", std::vector<starlark::Token>{t::Identifier{"globalist"}}},
         });
 
     etest::Suite s{};
@@ -41,7 +43,6 @@ int main() {
     for (const auto &[input, expected] : test_cases) {
         s.add_test(std::string{input}, [input, &expected](etest::IActions &a) {
             auto tokens = starlark::tokenize(input);
-            a.require(tokens.has_value());
             a.expect_eq(tokens, expected);
         });
     }
