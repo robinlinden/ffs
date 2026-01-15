@@ -10,45 +10,39 @@
 
 #include <array>
 #include <cassert>
-#include <span>
-#include <sstream>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <utility>
-
-namespace {
-
-std::string to_string(std::span<starlark::Token const> tokens) {
-    assert(!tokens.empty());
-
-    std::stringstream ss;
-    ss << starlark::to_string(tokens[0]);
-    tokens = tokens.subspan(1);
-
-    for (auto const &token : tokens) {
-        ss << ' ' << starlark::to_string(token);
-    }
-
-    return std::move(ss).str();
-}
-
-} // namespace
-
-constexpr auto kTestCases = std::to_array<std::pair<std::string_view, std::string_view>>({
-    {
-        R"(load("@rules_cc//cc:defs.bzl", "cc_library", "cc_test"))",
-        R"(load ( "@rules_cc//cc:defs.bzl" , "cc_library" , "cc_test" ))",
-    },
-});
+#include <vector>
 
 int main() {
+    namespace t = starlark::token;
+
+    const auto test_cases =
+        std::to_array<std::pair<std::string_view, std::optional<std::vector<starlark::Token>>>>({
+            {
+                R"(load("@rules_cc//cc:defs.bzl", "cc_library", "cc_test"))",
+                std::vector<starlark::Token>{
+                    t::Load{},
+                    t::LParen{},
+                    t::StringLiteral{"@rules_cc//cc:defs.bzl"},
+                    t::Comma{},
+                    t::StringLiteral{"cc_library"},
+                    t::Comma{},
+                    t::StringLiteral{"cc_test"},
+                    t::RParen{},
+                },
+            },
+        });
+
     etest::Suite s{};
 
-    for (const auto &[input, expected] : kTestCases) {
-        s.add_test(std::string{input}, [input, expected](etest::IActions &a) {
+    for (const auto &[input, expected] : test_cases) {
+        s.add_test(std::string{input}, [input, &expected](etest::IActions &a) {
             auto tokens = starlark::tokenize(input);
             a.require(tokens.has_value());
-            a.expect_eq(to_string(*tokens), expected);
+            a.expect_eq(tokens, expected);
         });
     }
 
