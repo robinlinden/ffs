@@ -3,7 +3,7 @@
 module(name = "ffs")
 
 bazel_dep(name = "platforms", version = "1.0.0")
-bazel_dep(name = "rules_cc", version = "0.1.4")
+bazel_dep(name = "rules_cc", version = "0.2.16")
 bazel_dep(name = "rules_fuzzing", version = "0.6.0")
 bazel_dep(name = "hastur")
 archive_override(
@@ -13,7 +13,7 @@ archive_override(
     patch_cmds = [
         """cat <<EOF >MODULE.bazel
 module(name = "hastur")
-bazel_dep(name = "rules_cc", version = "0.1.4")
+bazel_dep(name = "rules_cc", version = "0.2.16")
 bazel_dep(name = "rules_shell", version = "0.5.0")
 EOF""",
     ],
