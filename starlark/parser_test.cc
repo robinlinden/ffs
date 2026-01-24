@@ -4,6 +4,8 @@
 
 #include "starlark/parser.h"
 
+#include "starlark/ast.h"
+
 #include "etest/etest2.h"
 
 #include <array>
