@@ -120,9 +120,53 @@ class Parser {
                     return std::nullopt;
                 }
 
+                // On the first iteration, we check if this is a list comprehension.
+                auto maybe_next = next_token();
+                if (elements.empty() && maybe_next.has_value() &&
+                    std::holds_alternative<token::For>(*maybe_next)) {
+                    auto var_token = next_token();
+                    if (!var_token || !std::holds_alternative<token::Identifier>(*var_token)) {
+                        std::cerr << "Expected identifier in list comprehension.\n";
+                        return std::nullopt;
+                    }
+
+                    auto in_token = next_token();
+                    if (!in_token || !std::holds_alternative<token::In>(*in_token)) {
+                        std::cerr << "Expected 'in' in list comprehension.\n";
+                        return std::nullopt;
+                    }
+
+                    auto iterable_token = next_token();
+                    if (!iterable_token) {
+                        std::cerr << "Unexpected end of input in list comprehension.\n";
+                        return std::nullopt;
+                    }
+
+                    auto iterable_expr = parse_expression(*iterable_token);
+                    if (!iterable_expr) {
+                        std::cerr << "Failed to parse iterable expression in list comprehension.\n";
+                        return std::nullopt;
+                    }
+
+                    auto maybe_closing = next_token();
+                    if (!maybe_closing ||
+                        !std::holds_alternative<token::RBracket>(*maybe_closing)) {
+                        std::cerr << "Expected closing ']' in list comprehension.\n";
+                        return std::nullopt;
+                    }
+
+                    // TODO(robinlinden): Handle optional 'if' clause.
+
+                    return ListComp{
+                        .element = std::make_shared<Expression>(std::move(*element_expr)),
+                        .iterator_var =
+                            Identifier{.name = std::get<token::Identifier>(*var_token).name},
+                        .iterable = std::make_shared<Expression>(std::move(*iterable_expr)),
+                    };
+                }
+
                 elements.push_back(std::move(*element_expr));
 
-                auto maybe_next = next_token();
                 if (!maybe_next) {
                     std::cerr << "Tokenization error in list expression.\n";
                     return std::nullopt;

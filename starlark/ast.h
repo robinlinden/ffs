@@ -5,6 +5,7 @@
 #ifndef STARLARK_AST_H_
 #define STARLARK_AST_H_
 
+#include <memory>
 #include <optional>
 #include <string>
 #include <utility>
@@ -26,8 +27,8 @@ struct Identifier {
 struct CallExpr;
 struct DictExpr;
 struct ListExpr;
-
-using Expression = std::variant<CallExpr, StringLiteral, Identifier, ListExpr, DictExpr>;
+struct ListComp;
+using Expression = std::variant<CallExpr, StringLiteral, Identifier, ListComp, ListExpr, DictExpr>;
 
 struct Argument;
 
@@ -43,6 +44,15 @@ struct DictExpr {
     constexpr bool operator==(DictExpr const &) const;
 };
 
+// TODO(robinlinden): shared_ptr is silly here, but right now the ast has to be
+// copyable for some reason.
+struct ListComp {
+    std::shared_ptr<Expression> element;
+    Identifier iterator_var;
+    std::shared_ptr<Expression> iterable;
+    constexpr bool operator==(ListComp const &) const;
+};
+
 struct ListExpr {
     std::vector<Expression> elements;
     constexpr bool operator==(ListExpr const &) const = default;
@@ -55,6 +65,10 @@ struct Argument {
 };
 
 constexpr bool DictExpr::operator==(DictExpr const &o) const { return entries == o.entries; }
+
+constexpr bool ListComp::operator==(ListComp const &o) const {
+    return *element == *o.element && iterator_var == o.iterator_var && *iterable == *o.iterable;
+}
 
 struct ExpressionStmt {
     Expression expr;

@@ -176,6 +176,47 @@ int main() {
                 },
             },
         },
+        {
+            "[x for x in y]",
+            starlark::Program{
+                .statements{
+                    starlark::ExpressionStmt{
+                        .expr{
+                            starlark::ListComp{
+                                .element{std::make_shared<starlark::Expression>(
+                                    starlark::Identifier{"x"})},
+                                .iterator_var{"x"},
+                                .iterable = std::make_shared<starlark::Expression>(
+                                    starlark::Identifier{"y"}),
+                            },
+                        },
+                    },
+                },
+            },
+        },
+        {
+            R"([x for x in ["a", "b"]])",
+            starlark::Program{
+                .statements{
+                    starlark::ExpressionStmt{
+                        .expr{
+                            starlark::ListComp{
+                                .element{std::make_shared<starlark::Expression>(
+                                    starlark::Identifier{"x"})},
+                                .iterator_var{"x"},
+                                .iterable =
+                                    std::make_shared<starlark::Expression>(starlark::ListExpr{
+                                        .elements{
+                                            starlark::Expression{starlark::StringLiteral{"a"}},
+                                            starlark::Expression{starlark::StringLiteral{"b"}},
+                                        },
+                                    }),
+                            },
+                        },
+                    },
+                },
+            },
+        },
     });
 
     // TODO(robinlinden): Return error codes from parser and use that here.
@@ -209,6 +250,15 @@ int main() {
         R"({"key": "value" ")",
         // Unexpected token after entry.
         R"({"key": "value" foo})",
+
+        // ListComp
+        // Abrupt end of input.
+        "[e for",
+        "[e for y",
+        "[e for y in",
+        "[e for y in z",
+        // Parse error in iterable expression.
+        "[e for y in '",
     });
 
     etest::Suite s{};
