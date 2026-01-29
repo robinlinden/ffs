@@ -217,6 +217,17 @@ int main() {
                 },
             },
         },
+        {
+            "A = B",
+            starlark::Program{
+                .statements{
+                    starlark::AssignStmt{
+                        .target = starlark::Identifier{"A"},
+                        .value = starlark::Identifier{"B"},
+                    },
+                },
+            },
+        },
     });
 
     // TODO(robinlinden): Return error codes from parser and use that here.
@@ -259,6 +270,12 @@ int main() {
         "[e for y in z",
         // Parse error in iterable expression.
         "[e for y in '",
+
+        // AssignStmt
+        // Tokenization error in target.
+        "A = \"",
+        // Parse error in value.
+        "A = foo(",
     });
 
     etest::Suite s{};

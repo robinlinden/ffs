@@ -70,6 +70,12 @@ constexpr bool ListComp::operator==(ListComp const &o) const {
     return *element == *o.element && iterator_var == o.iterator_var && *iterable == *o.iterable;
 }
 
+struct AssignStmt {
+    Expression target;
+    Expression value;
+    constexpr bool operator==(AssignStmt const &) const = default;
+};
+
 struct ExpressionStmt {
     Expression expr;
     constexpr bool operator==(ExpressionStmt const &) const = default;
@@ -81,7 +87,7 @@ struct LoadStmt {
     constexpr bool operator==(LoadStmt const &) const = default;
 };
 
-using Statement = std::variant<LoadStmt, ExpressionStmt>;
+using Statement = std::variant<AssignStmt, LoadStmt, ExpressionStmt>;
 
 struct Program {
     std::vector<Statement> statements;

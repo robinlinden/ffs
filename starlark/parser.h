@@ -45,6 +45,27 @@ class Parser {
             }
 
             if (auto expr = parse_expression(token); expr.has_value()) {
+                auto next = next_token();
+                if (next.has_value() && std::holds_alternative<token::Equals>(*next)) {
+                    auto rhs_token = next_token();
+                    if (!rhs_token) {
+                        std::cerr << "Unexpected end of input in assignment.\n";
+                        return std::nullopt;
+                    }
+
+                    auto rhs = parse_expression(*rhs_token);
+                    if (!rhs) {
+                        std::cerr << "Failed to parse right-hand side of assignment.\n";
+                        return std::nullopt;
+                    }
+
+                    program.statements.push_back(
+                        AssignStmt{.target = std::move(*expr), .value = std::move(*rhs)});
+                    continue;
+                } else if (next.has_value()) {
+                    reconsume(std::move(*next));
+                }
+
                 program.statements.push_back(ExpressionStmt{.expr = std::move(*expr)});
                 continue;
             }
