@@ -178,7 +178,7 @@ class Tokenizer {
     }
 
     std::optional<Token> tokenize_punctuator() {
-        static const auto puncts = [] {
+        static auto const puncts = [] {
             auto punctuators = std::to_array<std::pair<std::string_view, Token>>({
                 {"+", token::Plus{}},
                 {"-", token::Minus{}},
@@ -232,7 +232,7 @@ class Tokenizer {
             return punctuators;
         }();
 
-        for (const auto &[str, punctuator] : puncts) {
+        for (auto const &[str, punctuator] : puncts) {
             if (input_.substr(pos_, str.size()) == str) {
                 pos_ += str.size();
                 return punctuator;

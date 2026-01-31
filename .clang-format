@@ -8,3 +8,4 @@ BinPackParameters: false
 ColumnLimit: 100
 BreakTemplateDeclarations: Yes
 SpaceAfterTemplateKeyword: false
+QualifierAlignment: Right

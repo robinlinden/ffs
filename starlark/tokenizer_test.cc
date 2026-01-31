@@ -19,7 +19,7 @@
 int main() {
     namespace t = starlark::token;
 
-    const auto test_cases =
+    auto const test_cases =
         std::to_array<std::pair<std::string_view, std::optional<std::vector<starlark::Token>>>>({
             {
                 R"(load("@rules_cc//cc:defs.bzl", "cc_library", "cc_test"))",
@@ -40,7 +40,7 @@ int main() {
 
     etest::Suite s{};
 
-    for (const auto &[input, expected] : test_cases) {
+    for (auto const &[input, expected] : test_cases) {
         s.add_test(std::string{input}, [input, &expected](etest::IActions &a) {
             auto tokens = starlark::tokenize(input);
             a.expect_eq(tokens, expected);

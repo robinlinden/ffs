@@ -309,20 +309,20 @@ struct Identifier {
     constexpr bool operator==(Identifier const &) const = default;
 };
 
-constexpr std::string_view to_string(const Identifier &id) { return id.name; }
+constexpr std::string_view to_string(Identifier const &id) { return id.name; }
 
 struct StringLiteral {
     std::string value;
     constexpr bool operator==(StringLiteral const &) const = default;
 };
 
-inline std::string to_string(const StringLiteral &str) { return std::format(R"("{}")", str.value); }
+inline std::string to_string(StringLiteral const &str) { return std::format(R"("{}")", str.value); }
 
 struct Eof {
     constexpr bool operator==(Eof const &) const = default;
 };
 
-constexpr std::string_view to_string(const Eof &) { return "<eof>"; }
+constexpr std::string_view to_string(Eof const &) { return "<eof>"; }
 
 } // namespace token
 
@@ -387,7 +387,7 @@ using Token = std::variant<
     token::StringLiteral,
     token::Eof>;
 
-inline std::string to_string(const Token &token) {
+inline std::string to_string(Token const &token) {
     return std::visit([](auto &&arg) { return std::string{to_string(arg)}; }, token);
 }
 
