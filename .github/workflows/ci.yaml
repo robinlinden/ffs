@@ -41,7 +41,7 @@ jobs:
         if: ${{ matrix.fuzz }}
 
   pre-commit:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-slim
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v6
@@ -49,7 +49,7 @@ jobs:
       - run: pre-commit run --all-files
 
   clang-format:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-slim
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v6
@@ -58,7 +58,7 @@ jobs:
       - run: git diff --exit-code
 
   buildifier:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-slim
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v6
@@ -66,7 +66,7 @@ jobs:
       - run: ./buildifier --lint=warn --warnings=all -mode diff $(find . -type f -iname "*.bazel" -or -iname "*.bzl")
 
   prettier:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-slim
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v6
