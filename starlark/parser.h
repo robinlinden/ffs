@@ -449,7 +449,8 @@ class Parser {
         return true;
     }
 
-    template <typename T> [[nodiscard]] std::optional<T> next_token_as() {
+    template<typename T>
+    [[nodiscard]] std::optional<T> next_token_as() {
         auto next = next_token();
         if (!next) {
             std::cerr << "Unexpected end of input.\n";

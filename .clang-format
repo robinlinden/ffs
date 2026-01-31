@@ -6,3 +6,5 @@ AlignAfterOpenBracket: AlwaysBreak
 BinPackArguments: false
 BinPackParameters: false
 ColumnLimit: 100
+BreakTemplateDeclarations: Yes
+SpaceAfterTemplateKeyword: false
