@@ -272,10 +272,12 @@ int main() {
         "[e for y in '",
 
         // AssignStmt
-        // Tokenization error in target.
+        // Tokenization error in value.
         "A = \"",
         // Parse error in value.
         "A = foo(",
+        // Non-ident target.
+        "\"A\" = B",
     });
 
     etest::Suite s{};

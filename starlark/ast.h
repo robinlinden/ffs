@@ -71,7 +71,7 @@ constexpr bool ListComp::operator==(ListComp const &o) const {
 }
 
 struct AssignStmt {
-    Expression target;
+    Identifier target;
     Expression value;
     constexpr bool operator==(AssignStmt const &) const = default;
 };

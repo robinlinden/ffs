@@ -47,6 +47,11 @@ class Parser {
             if (auto expr = parse_expression(token); expr.has_value()) {
                 auto next = next_token();
                 if (next.has_value() && std::holds_alternative<token::Equals>(*next)) {
+                    if (!std::holds_alternative<Identifier>(*expr)) {
+                        std::cerr << "Left-hand side of assignment must be an identifier.\n";
+                        return std::nullopt;
+                    }
+
                     auto rhs_token = next_token();
                     if (!rhs_token) {
                         std::cerr << "Unexpected end of input in assignment.\n";
@@ -60,7 +65,10 @@ class Parser {
                     }
 
                     program.statements.push_back(
-                        AssignStmt{.target = std::move(*expr), .value = std::move(*rhs)});
+                        AssignStmt{
+                            .target = std::move(std::get<Identifier>(*expr)),
+                            .value = std::move(*rhs),
+                        });
                     continue;
                 } else if (next.has_value()) {
                     reconsume(std::move(*next));
