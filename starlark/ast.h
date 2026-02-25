@@ -33,9 +33,9 @@ using Expression = std::variant<CallExpr, StringLiteral, Identifier, ListComp, L
 struct Argument;
 
 struct CallExpr {
-    std::string target;
+    std::shared_ptr<Expression> target;
     std::vector<Argument> args;
-    constexpr bool operator==(CallExpr const &) const = default;
+    constexpr bool operator==(CallExpr const &) const;
 };
 
 struct DictExpr {
@@ -63,6 +63,10 @@ struct Argument {
     Expression expr;
     constexpr bool operator==(Argument const &) const = default;
 };
+
+constexpr bool CallExpr::operator==(CallExpr const &o) const {
+    return *target == *o.target && args == o.args;
+}
 
 constexpr bool DictExpr::operator==(DictExpr const &o) const { return entries == o.entries; }
 

@@ -274,28 +274,24 @@ class Parser {
             return std::nullopt;
         }
 
-        if (auto const *ident = std::get_if<Identifier>(&*operand)) {
-            auto next = next_token();
-            if (!next) {
-                // This is fine.
-            } else if (std::holds_alternative<token::LParen>(*next)) {
-                auto args = parse_argument_list();
-                if (!args) {
-                    std::cerr << "Failed to parse argument list.\n";
-                    return std::nullopt;
-                }
-
-                return CallExpr{
-                    .target = std::move(ident->name),
-                    .args = std::move(*args),
-                };
+        auto next = next_token();
+        if (!next) {
+            // This is fine.
+        } else if (std::holds_alternative<token::LParen>(*next)) {
+            auto args = parse_argument_list();
+            if (!args) {
+                std::cerr << "Failed to parse argument list.\n";
+                return std::nullopt;
             }
 
-            if (next) {
-                reconsume(std::move(*next));
-            }
+            return CallExpr{
+                .target = std::make_shared<Expression>(std::move(*operand)),
+                .args = std::move(*args),
+            };
+        }
 
-            return operand;
+        if (next) {
+            reconsume(std::move(*next));
         }
 
         return operand;

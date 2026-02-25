@@ -71,7 +71,8 @@ int main() {
                     starlark::ExpressionStmt{
                         .expr{
                             starlark::CallExpr{
-                                .target = "foo",
+                                .target = std::make_shared<starlark::Expression>(
+                                    starlark::Identifier{"foo"}),
                                 .args{
                                     {
                                         starlark::Identifier{"bar"},
@@ -95,7 +96,8 @@ int main() {
                     starlark::ExpressionStmt{
                         .expr{
                             starlark::CallExpr{
-                                .target = "foo",
+                                .target = std::make_shared<starlark::Expression>(
+                                    starlark::Identifier{"foo"}),
                                 .args{
                                     {
                                         starlark::Identifier{"bar"},
@@ -104,7 +106,8 @@ int main() {
                                     {
                                         std::nullopt,
                                         starlark::CallExpr{
-                                            .target = "qux",
+                                            .target = std::make_shared<starlark::Expression>(
+                                                starlark::Identifier{"qux"}),
                                             .args{},
                                         },
                                     },
@@ -126,7 +129,8 @@ int main() {
                                     starlark::StringLiteral{"foo"},
                                     starlark::Identifier{"bar"},
                                     starlark::CallExpr{
-                                        .target = "baz",
+                                        .target = std::make_shared<starlark::Expression>(
+                                            starlark::Identifier{"baz"}),
                                         .args{},
                                     },
                                 },
@@ -150,7 +154,8 @@ int main() {
                                     },
                                     {
                                         starlark::CallExpr{
-                                            .target = "baz",
+                                            .target = std::make_shared<starlark::Expression>(
+                                                starlark::Identifier{"baz"}),
                                             .args{},
                                         },
                                         starlark::StringLiteral{"qux"},
@@ -224,6 +229,22 @@ int main() {
                     starlark::AssignStmt{
                         .target = starlark::Identifier{"A"},
                         .value = starlark::Identifier{"B"},
+                    },
+                },
+            },
+        },
+        {
+            R"("foo"())",
+            starlark::Program{
+                .statements{
+                    starlark::ExpressionStmt{
+                        .expr{
+                            starlark::CallExpr{
+                                .target = std::make_shared<starlark::Expression>(
+                                    starlark::StringLiteral{"foo"}),
+                                .args{},
+                            },
+                        },
                     },
                 },
             },
