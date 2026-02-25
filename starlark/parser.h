@@ -99,28 +99,8 @@ class Parser {
 
     void reconsume(Token token) { peeked_token_ = std::move(token); }
 
-    std::optional<Expression> parse_expression(Token &token) {
+    std::optional<Expression> parse_operand(Token &token) {
         if (auto const *ident = std::get_if<token::Identifier>(&token)) {
-            auto next = next_token();
-            if (!next) {
-                // This is fine.
-            } else if (std::holds_alternative<token::LParen>(*next)) {
-                auto args = parse_argument_list();
-                if (!args) {
-                    std::cerr << "Failed to parse argument list.\n";
-                    return std::nullopt;
-                }
-
-                return CallExpr{
-                    .target = std::move(ident->name),
-                    .args = std::move(*args),
-                };
-            }
-
-            if (next) {
-                reconsume(std::move(*next));
-            }
-
             return Identifier{.name = std::move(ident->name)};
         }
 
@@ -283,8 +263,42 @@ class Parser {
             return DictExpr{.entries = std::move(entries)};
         }
 
-        std::cerr << "Unexpected token in expression: " << to_string(token) << ".\n";
+        std::cerr << "Unexpected token in operand: " << to_string(token) << ".\n";
         return std::nullopt;
+    }
+
+    std::optional<Expression> parse_expression(Token &token) {
+        auto operand = parse_operand(token);
+        if (!operand) {
+            std::cerr << "Failed to parse operand.\n";
+            return std::nullopt;
+        }
+
+        if (auto const *ident = std::get_if<Identifier>(&*operand)) {
+            auto next = next_token();
+            if (!next) {
+                // This is fine.
+            } else if (std::holds_alternative<token::LParen>(*next)) {
+                auto args = parse_argument_list();
+                if (!args) {
+                    std::cerr << "Failed to parse argument list.\n";
+                    return std::nullopt;
+                }
+
+                return CallExpr{
+                    .target = std::move(ident->name),
+                    .args = std::move(*args),
+                };
+            }
+
+            if (next) {
+                reconsume(std::move(*next));
+            }
+
+            return operand;
+        }
+
+        return operand;
     }
 
     std::optional<std::vector<Argument>> parse_argument_list() {
