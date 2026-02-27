@@ -10,6 +10,8 @@
 
 #include <array>
 #include <cassert>
+#include <cstdint>
+#include <limits>
 #include <optional>
 #include <string>
 #include <string_view>
@@ -18,6 +20,7 @@
 
 int main() {
     namespace t = starlark::token;
+    using Tokens = std::vector<starlark::Token>;
 
     auto const test_cases =
         std::to_array<std::pair<std::string_view, std::optional<std::vector<starlark::Token>>>>({
@@ -36,6 +39,21 @@ int main() {
             },
             {"global", std::nullopt}, // Reserved identifier.
             {"globalist", std::vector<starlark::Token>{t::Identifier{"globalist"}}},
+            {"1234", Tokens{t::IntLiteral{1234}}},
+            {"00001234", Tokens{t::IntLiteral{1234}}},
+            {"123abc", std::nullopt},
+            {"123.123", std::nullopt}, // TODO(robinlinden): Floats.
+            {"-123", Tokens{t::IntLiteral{-123}}},
+            {
+                "9223372036854775807",
+                Tokens{t::IntLiteral{std::numeric_limits<std::int64_t>::max()}},
+            },
+            {"9223372036854775808", std::nullopt}, // Out of range. :(
+            {
+                "-9223372036854775808",
+                Tokens{t::IntLiteral{std::numeric_limits<std::int64_t>::min()}},
+            },
+            {"-9223372036854775809", std::nullopt}, // Out of range. :(
         });
 
     etest::Suite s{};

@@ -5,6 +5,7 @@
 #ifndef STARLARK_TOKEN_H_
 #define STARLARK_TOKEN_H_
 
+#include <cstdint>
 #include <format>
 #include <string>
 #include <string_view>
@@ -311,6 +312,13 @@ struct Identifier {
 
 constexpr std::string_view to_string(Identifier const &id) { return id.name; }
 
+struct IntLiteral {
+    std::int64_t value{};
+    constexpr bool operator==(IntLiteral const &) const = default;
+};
+
+inline std::string to_string(IntLiteral const &i) { return std::to_string(i.value); }
+
 struct StringLiteral {
     std::string value;
     constexpr bool operator==(StringLiteral const &) const = default;
@@ -384,6 +392,7 @@ using Token = std::variant<
     token::Lambda,
     token::Return,
     token::Identifier,
+    token::IntLiteral,
     token::StringLiteral,
     token::Eof>;
 

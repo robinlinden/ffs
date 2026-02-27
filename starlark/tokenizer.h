@@ -10,10 +10,12 @@
 #include <algorithm>
 #include <array>
 #include <cassert>
+#include <charconv>
 #include <cstddef>
 #include <optional>
 #include <string>
 #include <string_view>
+#include <system_error>
 #include <utility>
 #include <variant>
 #include <vector>
@@ -43,6 +45,11 @@ class Tokenizer {
             return tokenize_identifier();
         }
 
+        if (is_digit(input_[pos_]) ||
+            (input_[pos_] == '-' && pos_ + 1 < input_.size() && is_digit(input_[pos_ + 1]))) {
+            return tokenize_number();
+        }
+
         return tokenize_punctuator();
     }
 
@@ -69,6 +76,30 @@ class Tokenizer {
                 }
             }
         }
+    }
+
+    std::optional<Token> tokenize_number() {
+        assert(is_digit(input_[pos_]) || input_[pos_] == '-');
+
+        std::size_t start = pos_++;
+        while (pos_ < input_.size() && is_digit(input_[pos_])) {
+            ++pos_;
+        }
+
+        // TODO(robinlinden): Support floats.
+        if (pos_ < input_.size() && (is_alpha(input_[pos_]) || input_[pos_] == '.')) {
+            return std::nullopt;
+        }
+
+        auto numstr = input_.substr(start, pos_ - start);
+
+        std::int64_t value{};
+        auto [ptr, ec] = std::from_chars(numstr.data(), numstr.data() + numstr.size(), value);
+        if (ec != std::errc{} || ptr != numstr.data() + numstr.size()) {
+            return std::nullopt;
+        }
+
+        return token::IntLiteral{value};
     }
 
     // TODO(robinlinden): Support escapes.

@@ -108,6 +108,10 @@ class Parser {
             return StringLiteral{.value = std::move(sl->value)};
         }
 
+        if (auto *il = std::get_if<token::IntLiteral>(&token)) {
+            return IntLiteral{.value = il->value};
+        }
+
         if (std::holds_alternative<token::LBracket>(token)) {
             std::vector<Expression> elements;
             while (true) {

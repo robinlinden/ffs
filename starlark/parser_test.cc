@@ -249,6 +249,16 @@ int main() {
                 },
             },
         },
+        {
+            "42",
+            starlark::Program{
+                .statements{
+                    starlark::ExpressionStmt{
+                        .expr{starlark::IntLiteral{42}},
+                    },
+                },
+            },
+        },
     });
 
     // TODO(robinlinden): Return error codes from parser and use that here.

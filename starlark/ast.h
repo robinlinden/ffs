@@ -5,6 +5,7 @@
 #ifndef STARLARK_AST_H_
 #define STARLARK_AST_H_
 
+#include <cstdint>
 #include <memory>
 #include <optional>
 #include <string>
@@ -19,6 +20,11 @@ struct StringLiteral {
     constexpr bool operator==(StringLiteral const &) const = default;
 };
 
+struct IntLiteral {
+    std::int64_t value{};
+    constexpr bool operator==(IntLiteral const &) const = default;
+};
+
 struct Identifier {
     std::string name;
     constexpr bool operator==(Identifier const &) const = default;
@@ -28,7 +34,8 @@ struct CallExpr;
 struct DictExpr;
 struct ListExpr;
 struct ListComp;
-using Expression = std::variant<CallExpr, StringLiteral, Identifier, ListComp, ListExpr, DictExpr>;
+using Expression =
+    std::variant<CallExpr, StringLiteral, IntLiteral, Identifier, ListComp, ListExpr, DictExpr>;
 
 struct Argument;
 
