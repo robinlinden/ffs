@@ -190,8 +190,8 @@ class Parser {
                     continue;
                 }
 
-                std::cerr << "Expected ',' or ']' in list expression, got " << to_string(next_token)
-                          << ".\n";
+                std::cerr << "Expected ',' or ']' in list expression, got '"
+                          << to_string(next_token) << "'.\n";
                 return std::nullopt;
             }
 
@@ -255,8 +255,8 @@ class Parser {
                     continue;
                 }
 
-                std::cerr << "Expected ',' or '}' in dict expression, got " << to_string(next_token)
-                          << ".\n";
+                std::cerr << "Expected ',' or '}' in dict expression, got '"
+                          << to_string(next_token) << "'.\n";
                 return std::nullopt;
             }
 
@@ -311,8 +311,8 @@ class Parser {
                 auto const &token = *maybe_token;
                 if (!std::holds_alternative<token::Comma>(token) &&
                     !std::holds_alternative<token::RParen>(token)) {
-                    std::cerr << "Expected ',' or ')' in argument list, got " << to_string(token)
-                              << ".\n";
+                    std::cerr << "Expected ',' or ')' in argument list, got '" << to_string(token)
+                              << "'.\n";
                     return std::nullopt;
                 }
 
@@ -408,8 +408,8 @@ class Parser {
             }
 
             if (!std::holds_alternative<token::Comma>(*maybe_comma_or_rparen)) {
-                std::cerr << "Expected ',' or ')' in load statement, got "
-                          << to_string(*maybe_comma_or_rparen) << ".\n";
+                std::cerr << "Expected ',' or ')' in load statement, got '"
+                          << to_string(*maybe_comma_or_rparen) << "'.\n";
                 return std::nullopt;
             }
 
@@ -459,8 +459,8 @@ class Parser {
         }
 
         if (next != expected) {
-            std::cerr << "Expected " << to_string(expected) << ", got " << to_string(*next)
-                      << ".\n";
+            std::cerr << "Expected " << to_string(expected) << ", got '" << to_string(*next)
+                      << "'.\n";
             return false;
         }
 
@@ -479,8 +479,8 @@ class Parser {
             return std::move(*t);
         }
 
-        std::cerr << "Expected token of type " << typeid(T).name() << ", got " << to_string(*next)
-                  << ".\n";
+        std::cerr << "Expected token of type " << typeid(T).name() << ", got '" << to_string(*next)
+                  << "'.\n";
         return std::nullopt;
     }
 };
