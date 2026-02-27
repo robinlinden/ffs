@@ -46,8 +46,6 @@ class Tokenizer {
         return tokenize_punctuator();
     }
 
-    std::string_view remaining_input() const { return input_.substr(pos_); }
-
   private:
     bool is_whitespace(char c) const { return c == ' ' || c == '\t' || c == '\n' || c == '\r'; }
 
