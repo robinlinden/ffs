@@ -34,8 +34,17 @@ struct CallExpr;
 struct DictExpr;
 struct ListExpr;
 struct ListComp;
-using Expression =
-    std::variant<CallExpr, StringLiteral, IntLiteral, Identifier, ListComp, ListExpr, DictExpr>;
+struct SliceExpr;
+
+using Expression = std::variant<
+    CallExpr,
+    StringLiteral,
+    IntLiteral,
+    Identifier,
+    ListComp,
+    ListExpr,
+    DictExpr,
+    SliceExpr>;
 
 struct Argument;
 
@@ -49,6 +58,12 @@ struct DictExpr {
     std::vector<std::pair<Expression, Expression>> entries;
     // Clang 18 dies if this is defaulted.
     constexpr bool operator==(DictExpr const &) const;
+};
+
+struct SliceExpr {
+    std::shared_ptr<Expression> target;
+    std::shared_ptr<Expression> index;
+    constexpr bool operator==(SliceExpr const &) const;
 };
 
 // TODO(robinlinden): shared_ptr is silly here, but right now the ast has to be
@@ -76,6 +91,10 @@ constexpr bool CallExpr::operator==(CallExpr const &o) const {
 }
 
 constexpr bool DictExpr::operator==(DictExpr const &o) const { return entries == o.entries; }
+
+constexpr bool SliceExpr::operator==(SliceExpr const &o) const {
+    return *target == *o.target && *index == *o.index;
+}
 
 constexpr bool ListComp::operator==(ListComp const &o) const {
     return *element == *o.element && iterator_var == o.iterator_var && *iterable == *o.iterable;

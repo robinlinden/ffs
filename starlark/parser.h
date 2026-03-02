@@ -292,9 +292,28 @@ class Parser {
                 .target = std::make_shared<Expression>(std::move(*operand)),
                 .args = std::move(*args),
             };
-        }
+        } else if (std::holds_alternative<token::LBracket>(*next)) {
+            next = next_token();
+            if (!next) {
+                std::cerr << "Unexpected end of input after '['.\n";
+                return std::nullopt;
+            }
 
-        if (next) {
+            auto index_expr = parse_expression(*next);
+            if (!index_expr) {
+                std::cerr << "Failed to parse index expression.\n";
+                return std::nullopt;
+            }
+
+            if (!expect_next_token(token::RBracket{})) {
+                return std::nullopt;
+            }
+
+            return SliceExpr{
+                .target = std::make_shared<Expression>(std::move(*operand)),
+                .index = std::make_shared<Expression>(std::move(*index_expr)),
+            };
+        } else {
             reconsume(std::move(*next));
         }
 

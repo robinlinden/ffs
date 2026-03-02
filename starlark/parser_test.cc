@@ -259,6 +259,23 @@ int main() {
                 },
             },
         },
+        {
+            "42[5]",
+            starlark::Program{
+                .statements{
+                    starlark::ExpressionStmt{
+                        .expr{
+                            starlark::SliceExpr{
+                                .target = std::make_shared<starlark::Expression>(
+                                    starlark::IntLiteral{42}),
+                                .index =
+                                    std::make_shared<starlark::Expression>(starlark::IntLiteral{5}),
+                            },
+                        },
+                    },
+                },
+            },
+        },
     });
 
     // TODO(robinlinden): Return error codes from parser and use that here.
