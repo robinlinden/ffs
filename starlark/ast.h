@@ -35,6 +35,7 @@ struct DictExpr;
 struct ListExpr;
 struct ListComp;
 struct SliceExpr;
+struct MemberExpr;
 
 using Expression = std::variant<
     CallExpr,
@@ -44,7 +45,8 @@ using Expression = std::variant<
     ListComp,
     ListExpr,
     DictExpr,
-    SliceExpr>;
+    SliceExpr,
+    MemberExpr>;
 
 struct Argument;
 
@@ -64,6 +66,12 @@ struct SliceExpr {
     std::shared_ptr<Expression> target;
     std::shared_ptr<Expression> index;
     constexpr bool operator==(SliceExpr const &) const;
+};
+
+struct MemberExpr {
+    std::shared_ptr<Expression> target;
+    Identifier member;
+    constexpr bool operator==(MemberExpr const &) const;
 };
 
 // TODO(robinlinden): shared_ptr is silly here, but right now the ast has to be
@@ -98,6 +106,10 @@ constexpr bool SliceExpr::operator==(SliceExpr const &o) const {
 
 constexpr bool ListComp::operator==(ListComp const &o) const {
     return *element == *o.element && iterator_var == o.iterator_var && *iterable == *o.iterable;
+}
+
+constexpr bool MemberExpr::operator==(MemberExpr const &o) const {
+    return *target == *o.target && member == o.member;
 }
 
 struct AssignStmt {

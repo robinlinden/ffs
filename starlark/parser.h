@@ -313,6 +313,17 @@ class Parser {
                 .target = std::make_shared<Expression>(std::move(*operand)),
                 .index = std::make_shared<Expression>(std::move(*index_expr)),
             };
+        } else if (std::holds_alternative<token::Dot>(*next)) {
+            auto member_token = next_token();
+            if (!member_token || !std::holds_alternative<token::Identifier>(*member_token)) {
+                std::cerr << "Expected identifier after '.'.\n";
+                return std::nullopt;
+            }
+
+            return MemberExpr{
+                .target = std::make_shared<Expression>(std::move(*operand)),
+                .member = Identifier{.name = std::get<token::Identifier>(*member_token).name},
+            };
         } else {
             reconsume(std::move(*next));
         }

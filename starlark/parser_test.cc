@@ -276,6 +276,22 @@ int main() {
                 },
             },
         },
+        {
+            "foo.bar",
+            starlark::Program{
+                .statements{
+                    starlark::ExpressionStmt{
+                        .expr{
+                            starlark::MemberExpr{
+                                .target = std::make_shared<starlark::Expression>(
+                                    starlark::Identifier{"foo"}),
+                                .member = starlark::Identifier{"bar"},
+                            },
+                        },
+                    },
+                },
+            },
+        },
     });
 
     // TODO(robinlinden): Return error codes from parser and use that here.
@@ -326,6 +342,12 @@ int main() {
         "A = foo(",
         // Non-ident target.
         "\"A\" = B",
+
+        // MemberExpr
+        // Missing member name.
+        "foo.",
+        // Invalid member name.
+        "foo.5",
     });
 
     etest::Suite s{};
