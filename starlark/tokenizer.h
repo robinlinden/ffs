@@ -34,11 +34,19 @@ class Tokenizer {
         }
 
         if (input_.substr(pos_, 3) == R"(""")") {
-            return tokenize_multiline_string();
+            return tokenize_multiline_string('"');
         }
 
         if (input_[pos_] == '"') {
-            return tokenize_string();
+            return tokenize_string('"');
+        }
+
+        if (input_.substr(pos_, 3) == R"(''')") {
+            return tokenize_multiline_string('\'');
+        }
+
+        if (input_[pos_] == '\'') {
+            return tokenize_string('\'');
         }
 
         if (is_alpha(input_[pos_])) {
@@ -103,11 +111,13 @@ class Tokenizer {
     }
 
     // TODO(robinlinden): Support escapes.
-    std::optional<Token> tokenize_multiline_string() {
+    std::optional<Token> tokenize_multiline_string(char quote_char) {
+        assert(quote_char == '"' || quote_char == '\'');
         pos_ += 3;                // Move past the opening triple quotes
         std::size_t start = pos_; // Skip the opening triple quotes
 
-        while (pos_ + 2 < input_.size() && input_.substr(pos_, 3) != R"(""")") {
+        std::string_view closer = quote_char == '"' ? R"(""")" : R"(''')";
+        while (pos_ + 2 < input_.size() && input_.substr(pos_, 3) != closer) {
             pos_++;
         }
 
@@ -121,10 +131,11 @@ class Tokenizer {
     }
 
     // TODO(robinlinden): Support escapes.
-    std::optional<Token> tokenize_string() {
-        assert(input_[pos_] == '"');
+    std::optional<Token> tokenize_string(char quote_char) {
+        assert(quote_char == '"' || quote_char == '\'');
+        assert(input_[pos_] == '"' || input_[pos_] == '\'');
         std::size_t start = ++pos_;
-        while (pos_ < input_.size() && input_[pos_] != '"') {
+        while (pos_ < input_.size() && input_[pos_] != quote_char) {
             ++pos_;
         }
 

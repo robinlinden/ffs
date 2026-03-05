@@ -54,6 +54,20 @@ int main() {
                 Tokens{t::IntLiteral{std::numeric_limits<std::int64_t>::min()}},
             },
             {"-9223372036854775809", std::nullopt}, // Out of range. :(
+            {
+                R"("hello world" 'hello world')",
+                Tokens{t::StringLiteral{"hello world"}, t::StringLiteral{"hello world"}},
+            },
+            {
+                R"("""hello
+world""")",
+                Tokens{t::StringLiteral{"hello\nworld"}},
+            },
+            {
+                R"('''hello
+world''')",
+                Tokens{t::StringLiteral{"hello\nworld"}},
+            },
         });
 
     etest::Suite s{};
