@@ -280,8 +280,10 @@ class Parser {
 
         auto next = next_token();
         if (!next) {
-            // This is fine.
-        } else if (std::holds_alternative<token::LParen>(*next)) {
+            return operand;
+        }
+
+        if (std::holds_alternative<token::LParen>(*next)) {
             auto args = parse_argument_list();
             if (!args) {
                 std::cerr << "Failed to parse argument list.\n";
@@ -292,7 +294,9 @@ class Parser {
                 .target = std::make_shared<Expression>(std::move(*operand)),
                 .args = std::move(*args),
             };
-        } else if (std::holds_alternative<token::LBracket>(*next)) {
+        }
+
+        if (std::holds_alternative<token::LBracket>(*next)) {
             next = next_token();
             if (!next) {
                 std::cerr << "Unexpected end of input after '['.\n";
@@ -313,7 +317,9 @@ class Parser {
                 .target = std::make_shared<Expression>(std::move(*operand)),
                 .index = std::make_shared<Expression>(std::move(*index_expr)),
             };
-        } else if (std::holds_alternative<token::Dot>(*next)) {
+        }
+
+        if (std::holds_alternative<token::Dot>(*next)) {
             auto member_token = next_token();
             if (!member_token || !std::holds_alternative<token::Identifier>(*member_token)) {
                 std::cerr << "Expected identifier after '.'.\n";
@@ -324,10 +330,10 @@ class Parser {
                 .target = std::make_shared<Expression>(std::move(*operand)),
                 .member = Identifier{.name = std::get<token::Identifier>(*member_token).name},
             };
-        } else {
-            reconsume(std::move(*next));
         }
 
+        // We didn't end up using the next token, so put it back for later.
+        reconsume(std::move(*next));
         return operand;
     }
 
