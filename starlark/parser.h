@@ -272,69 +272,77 @@ class Parser {
     }
 
     std::optional<Expression> parse_expression(Token &token) {
-        auto operand = parse_operand(token);
-        if (!operand) {
+        auto expr = parse_operand(token);
+        if (!expr) {
             std::cerr << "Failed to parse operand.\n";
             return std::nullopt;
         }
 
-        auto next = next_token();
-        if (!next) {
-            return operand;
-        }
-
-        if (std::holds_alternative<token::LParen>(*next)) {
-            auto args = parse_argument_list();
-            if (!args) {
-                std::cerr << "Failed to parse argument list.\n";
-                return std::nullopt;
-            }
-
-            return CallExpr{
-                .target = std::make_shared<Expression>(std::move(*operand)),
-                .args = std::move(*args),
-            };
-        }
-
-        if (std::holds_alternative<token::LBracket>(*next)) {
-            next = next_token();
+        while (true) {
+            auto next = next_token();
             if (!next) {
-                std::cerr << "Unexpected end of input after '['.\n";
-                return std::nullopt;
+                return expr;
             }
 
-            auto index_expr = parse_expression(*next);
-            if (!index_expr) {
-                std::cerr << "Failed to parse index expression.\n";
-                return std::nullopt;
+            if (std::holds_alternative<token::LParen>(*next)) {
+                auto args = parse_argument_list();
+                if (!args) {
+                    std::cerr << "Failed to parse argument list.\n";
+                    return std::nullopt;
+                }
+
+                expr = CallExpr{
+                    .target = std::make_shared<Expression>(std::move(*expr)),
+                    .args = std::move(*args),
+                };
+
+                continue;
             }
 
-            if (!expect_next_token(token::RBracket{})) {
-                return std::nullopt;
+            if (std::holds_alternative<token::LBracket>(*next)) {
+                next = next_token();
+                if (!next) {
+                    std::cerr << "Unexpected end of input after '['.\n";
+                    return std::nullopt;
+                }
+
+                auto index_expr = parse_expression(*next);
+                if (!index_expr) {
+                    std::cerr << "Failed to parse index expression.\n";
+                    return std::nullopt;
+                }
+
+                if (!expect_next_token(token::RBracket{})) {
+                    return std::nullopt;
+                }
+
+                expr = SliceExpr{
+                    .target = std::make_shared<Expression>(std::move(*expr)),
+                    .index = std::make_shared<Expression>(std::move(*index_expr)),
+                };
+
+                continue;
             }
 
-            return SliceExpr{
-                .target = std::make_shared<Expression>(std::move(*operand)),
-                .index = std::make_shared<Expression>(std::move(*index_expr)),
-            };
+            if (std::holds_alternative<token::Dot>(*next)) {
+                auto member_token = next_token();
+                if (!member_token || !std::holds_alternative<token::Identifier>(*member_token)) {
+                    std::cerr << "Expected identifier after '.'.\n";
+                    return std::nullopt;
+                }
+
+                expr = MemberExpr{
+                    .target = std::make_shared<Expression>(std::move(*expr)),
+                    .member = Identifier{.name = std::get<token::Identifier>(*member_token).name},
+                };
+
+                continue;
+            }
+
+            // We didn't end up using the next token, so put it back for later.
+            reconsume(std::move(*next));
+            return expr;
         }
-
-        if (std::holds_alternative<token::Dot>(*next)) {
-            auto member_token = next_token();
-            if (!member_token || !std::holds_alternative<token::Identifier>(*member_token)) {
-                std::cerr << "Expected identifier after '.'.\n";
-                return std::nullopt;
-            }
-
-            return MemberExpr{
-                .target = std::make_shared<Expression>(std::move(*operand)),
-                .member = Identifier{.name = std::get<token::Identifier>(*member_token).name},
-            };
-        }
-
-        // We didn't end up using the next token, so put it back for later.
-        reconsume(std::move(*next));
-        return operand;
     }
 
     std::optional<std::vector<Argument>> parse_argument_list() {

@@ -292,6 +292,39 @@ int main() {
                 },
             },
         },
+        {
+            "foo.baz[3].qux().bar",
+            starlark::Program{
+                .statements{
+                    starlark::ExpressionStmt{
+                        .expr{
+                            starlark::MemberExpr{
+                                .target = std::make_shared<starlark::Expression>(starlark::CallExpr{
+                                    .target =
+                                        std::make_shared<starlark::Expression>(starlark::MemberExpr{
+                                            .target = std::make_shared<
+                                                starlark::Expression>(starlark::SliceExpr{
+                                                .target = std::make_shared<starlark::Expression>(
+                                                    starlark::MemberExpr{
+                                                        .target =
+                                                            std::make_shared<starlark::Expression>(
+                                                                starlark::Identifier{"foo"}),
+                                                        .member = starlark::Identifier{"baz"},
+                                                    }),
+                                                .index = std::make_shared<starlark::Expression>(
+                                                    starlark::IntLiteral{3}),
+                                            }),
+                                            .member = starlark::Identifier{"qux"},
+                                        }),
+                                    .args{},
+                                }),
+                                .member = starlark::Identifier{"bar"},
+                            },
+                        },
+                    },
+                },
+            },
+        },
     });
 
     // TODO(robinlinden): Return error codes from parser and use that here.
