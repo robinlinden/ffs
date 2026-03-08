@@ -7,6 +7,7 @@
 
 #include "starlark/ast.h"
 
+#include <cstdint>
 #include <map>
 #include <optional>
 #include <string>
@@ -16,7 +17,7 @@
 namespace starlark {
 
 struct Value {
-    std::variant<std::string, std::vector<Value>> v;
+    std::variant<std::int64_t, std::string, std::vector<Value>> v;
     constexpr bool operator==(Value const &) const = default;
 };
 
@@ -69,6 +70,7 @@ class Interpreter {
     }
 
     std::optional<Value> run(StringLiteral const &str) { return Value{str.value}; }
+    std::optional<Value> run(IntLiteral const &i) { return Value{i.value}; }
 
     std::optional<Value> run(ListExpr const &list) {
         std::vector<Value> elements;
@@ -84,6 +86,52 @@ class Interpreter {
         }
 
         return Value{.v = std::move(elements)};
+    }
+
+    std::optional<Value> run(SliceExpr const &se) {
+        auto const target = run(*se.target);
+        if (!target) {
+            return std::nullopt;
+        }
+
+        if (auto const *str = std::get_if<std::string>(&target->v); str != nullptr) {
+            auto maybe_idx = run(*se.index);
+            if (!maybe_idx) {
+                return std::nullopt;
+            }
+
+            auto const *idx = std::get_if<std::int64_t>(&maybe_idx->v);
+            if (idx == nullptr || *idx < 0) {
+                return std::nullopt;
+            }
+
+            if (static_cast<std::uint32_t>(*idx) >= str->size()) {
+                return std::nullopt;
+            }
+
+            auto const char_res = (*str)[static_cast<std::uint32_t>(*idx)];
+            return Value{std::string{char_res}};
+        }
+
+        if (auto const *list = std::get_if<std::vector<Value>>(&target->v); list != nullptr) {
+            auto maybe_idx = run(*se.index);
+            if (!maybe_idx) {
+                return std::nullopt;
+            }
+
+            auto const *idx = std::get_if<std::int64_t>(&maybe_idx->v);
+            if (idx == nullptr || *idx < 0) {
+                return std::nullopt;
+            }
+
+            if (static_cast<std::uint32_t>(*idx) >= list->size()) {
+                return std::nullopt;
+            }
+
+            return Value{(*list)[static_cast<std::uint32_t>(*idx)]};
+        }
+
+        return std::nullopt;
     }
 };
 

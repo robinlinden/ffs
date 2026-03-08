@@ -94,5 +94,79 @@ int main() {
             }});
     });
 
+    s.add_test("SliceExpr, bad target", [](etest::IActions &a) {
+        auto slice_expr = SliceExpr{
+            .target = std::make_shared<Expression>(CallExpr{
+                .target = std::make_shared<Expression>(Identifier{"no!"}),
+                .args{},
+            }),
+            .index = std::make_shared<Expression>(IntLiteral{0}),
+        };
+
+        // Error in lhs.
+        a.expect_eq(run(slice_expr), std::nullopt);
+
+        // Unsupported lhs.
+        *slice_expr.target = IntLiteral{13};
+        a.expect_eq(run(slice_expr), std::nullopt);
+    });
+
+    s.add_test("SliceExpr, string target", [](etest::IActions &a) {
+        auto slice_expr = SliceExpr{
+            .target = std::make_shared<Expression>(StringLiteral{"hi"}),
+            // We're switching the index to test different scenarios, so this
+            // doesn't matter.
+            .index = std::make_shared<Expression>(IntLiteral{}),
+        };
+
+        auto &idx = *slice_expr.index;
+
+        idx = IntLiteral{0};
+        a.expect_eq(run(slice_expr), Value{"h"});
+
+        idx = IntLiteral{1};
+        a.expect_eq(run(slice_expr), Value{"i"});
+
+        idx = StringLiteral{"a"};
+        a.expect_eq(run(slice_expr), std::nullopt);
+
+        idx = IntLiteral{-1};
+        a.expect_eq(run(slice_expr), std::nullopt);
+
+        idx = IntLiteral{2};
+        a.expect_eq(run(slice_expr), std::nullopt);
+    });
+
+    s.add_test("SliceExpr, list target", [](etest::IActions &a) {
+        auto slice_expr = SliceExpr{
+            .target = std::make_shared<Expression>(ListExpr{
+                .elements{
+                    Expression{StringLiteral{"first!"}},
+                    Expression{IntLiteral{2}},
+                },
+            }),
+            // We're switching the index to test different scenarios, so this
+            // doesn't matter.
+            .index = std::make_shared<Expression>(IntLiteral{}),
+        };
+
+        auto &idx = *slice_expr.index;
+
+        idx = IntLiteral{0};
+        a.expect_eq(run(slice_expr), Value{"first!"});
+
+        idx = IntLiteral{1};
+        a.expect_eq(run(slice_expr), Value{2});
+
+        idx = StringLiteral{"a"};
+        a.expect_eq(run(slice_expr), std::nullopt);
+
+        idx = IntLiteral{-1};
+        a.expect_eq(run(slice_expr), std::nullopt);
+
+        idx = IntLiteral{2};
+        a.expect_eq(run(slice_expr), std::nullopt);
+    });
+
     return s.run();
 }
