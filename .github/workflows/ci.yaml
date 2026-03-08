@@ -42,7 +42,6 @@ jobs:
 
   pre-commit:
     runs-on: ubuntu-slim
-    timeout-minutes: 5
     steps:
       - uses: actions/checkout@v6
       - run: pipx install pre-commit==4.5.1
@@ -50,7 +49,6 @@ jobs:
 
   clang-format:
     runs-on: ubuntu-slim
-    timeout-minutes: 5
     steps:
       - uses: actions/checkout@v6
       - name: Set up the llvm repository
@@ -63,7 +61,6 @@ jobs:
 
   buildifier:
     runs-on: ubuntu-slim
-    timeout-minutes: 5
     steps:
       - uses: actions/checkout@v6
       - run: wget --output-document=buildifier https://github.com/bazelbuild/buildtools/releases/download/v8.5.1/buildifier-linux-amd64 && sudo chmod +x buildifier
@@ -71,7 +68,6 @@ jobs:
 
   prettier:
     runs-on: ubuntu-slim
-    timeout-minutes: 5
     steps:
       - uses: actions/checkout@v6
       - run: npm install --global prettier@3.8.1
