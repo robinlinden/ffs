@@ -45,7 +45,7 @@ jobs:
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v6
-      - run: pipx install pre-commit==4.3.0
+      - run: pipx install pre-commit==4.5.1
       - run: pre-commit run --all-files
 
   clang-format:
@@ -66,7 +66,7 @@ jobs:
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v6
-      - run: wget --output-document=buildifier https://github.com/bazelbuild/buildtools/releases/download/v8.2.1/buildifier-linux-amd64 && sudo chmod +x buildifier
+      - run: wget --output-document=buildifier https://github.com/bazelbuild/buildtools/releases/download/v8.5.1/buildifier-linux-amd64 && sudo chmod +x buildifier
       - run: ./buildifier --lint=warn --warnings=all -mode diff $(find . -type f -iname "*.bazel" -or -iname "*.bzl")
 
   prettier:
@@ -74,6 +74,6 @@ jobs:
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v6
-      - run: npm install --global prettier@3.6.2
+      - run: npm install --global prettier@3.8.1
       - run: npx prettier --ignore-path .gitignore --write .
       - run: git diff --exit-code
