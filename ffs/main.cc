@@ -6,9 +6,11 @@
 #include "starlark/token.h"
 #include "starlark/tokenizer.h"
 
+#include <cassert>
 #include <fstream>
 #include <iostream>
 #include <iterator>
+#include <optional>
 #include <sstream>
 #include <string>
 #include <string_view>
@@ -27,14 +29,8 @@ std::string to_string(std::vector<starlark::Token> const &tokens) {
     return std::move(ss).str();
 }
 
-} // namespace
-
-int main(int argc, char **argv) {
-    if (argc != 2) {
-        std::string_view name = argv[0] != nullptr ? argv[0] : "<bin>";
-        std::cerr << "Usage: " << name << " <input_file>\n";
-        return 1;
-    }
+int run_debug(int argc, char **argv) {
+    assert(argc == 2);
 
     auto input = std::ifstream{argv[1]};
     if (!input) {
@@ -59,4 +55,18 @@ int main(int argc, char **argv) {
         std::cerr << "Error: Failed to parse input.\n";
         return 1;
     }
+
+    return 0;
+}
+
+} // namespace
+
+int main(int argc, char **argv) {
+    if (argc != 2) {
+        std::string_view name = argv[0] != nullptr ? argv[0] : "<bin>";
+        std::cerr << "Usage: " << name << " <input_file>\n";
+        return 1;
+    }
+
+    return run_debug(argc, argv);
 }
