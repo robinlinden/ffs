@@ -65,7 +65,7 @@ int main() {
             },
         },
         {
-            R"(foo(bar = "baz", "qux"))",
+            R"(foo("qux", bar = "baz"))",
             starlark::Program{
                 .statements{
                     starlark::ExpressionStmt{
@@ -75,12 +75,12 @@ int main() {
                                     starlark::Identifier{"foo"}),
                                 .args{
                                     {
-                                        starlark::Identifier{"bar"},
-                                        starlark::StringLiteral{"baz"},
-                                    },
-                                    {
                                         std::nullopt,
                                         starlark::StringLiteral{"qux"},
+                                    },
+                                    {
+                                        starlark::Identifier{"bar"},
+                                        starlark::StringLiteral{"baz"},
                                     },
                                 },
                             },
@@ -90,7 +90,7 @@ int main() {
             },
         },
         {
-            R"(foo(bar = baz, qux()))",
+            R"(foo(qux(), bar = baz))",
             starlark::Program{
                 .statements{
                     starlark::ExpressionStmt{
@@ -100,16 +100,16 @@ int main() {
                                     starlark::Identifier{"foo"}),
                                 .args{
                                     {
-                                        starlark::Identifier{"bar"},
-                                        starlark::Identifier{"baz"},
-                                    },
-                                    {
                                         std::nullopt,
                                         starlark::CallExpr{
                                             .target = std::make_shared<starlark::Expression>(
                                                 starlark::Identifier{"qux"}),
                                             .args{},
                                         },
+                                    },
+                                    {
+                                        starlark::Identifier{"bar"},
+                                        starlark::Identifier{"baz"},
                                     },
                                 },
                             },
@@ -331,7 +331,9 @@ int main() {
     static constexpr auto kExpectedParseFailures = std::to_array<std::string_view>({
         // CallExpr
         // Missing closing parenthesis.
-        R"(foo(bar = "baz", "qux")",
+        R"(foo("qux")",
+        // Positional argument after kw argument.
+        R"(foo(bar = baz, qux()))",
 
         // ListExpr
         // Tokenization error.

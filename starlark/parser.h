@@ -347,6 +347,7 @@ class Parser {
 
     std::optional<std::vector<Argument>> parse_argument_list() {
         std::vector<Argument> args;
+        bool seen_kw_arg = false;
 
         while (true) {
             auto maybe_token = next_token();
@@ -391,6 +392,7 @@ class Parser {
                 }
 
                 if (std::holds_alternative<token::Equals>(*next)) {
+                    seen_kw_arg = true;
                     name = Identifier{.name = std::move(ident->name)};
 
                     auto value_token = next_token();
@@ -412,6 +414,11 @@ class Parser {
 
                 // Not a named argument, fall through to regular arg handling.
                 reconsume(std::move(*next));
+            }
+
+            if (seen_kw_arg) {
+                std::cerr << "Positional argument may not follow keyword argument.\n";
+                return std::nullopt;
             }
 
             auto value_expr = parse_expression(token);
