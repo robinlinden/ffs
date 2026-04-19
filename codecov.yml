@@ -1,0 +1,17 @@
+# https://docs.codecov.com/docs/pull-request-comments#disable-comment
+comment: false
+
+# TODO(robinlinden): Remove once we've made the coverage reporting less silly.
+#
+# gcc reports most lines as partially covered, even when they are seemingly
+# branchless and should either be covered or not, and I've been unable to get
+# clang coverage reporting working with Bazel 9 in robinlinden/hastur, so I'm
+# not going to spend time on it here until I know why it's broken.
+coverage:
+  status:
+    project:
+      default:
+        informational: true
+    patch:
+      default:
+        informational: true

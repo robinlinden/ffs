@@ -21,6 +21,7 @@ jobs:
             os: ubuntu-24.04
             cc: gcc-14
             cxx: g++-14
+            coverage: true
 
           - name: linux-clang-18
             os: ubuntu-24.04
@@ -35,8 +36,21 @@ jobs:
     steps:
       - run: echo "CC=${{ matrix.cc }}" >>$GITHUB_ENV && echo "CXX=${{ matrix.cxx }}" >>$GITHUB_ENV
         if: ${{ matrix.cc != '' }}
+      - run: sudo apt-get update && sudo apt-get install --assume-yes --no-install-recommends lcov
+        if: ${{ matrix.coverage }}
       - uses: actions/checkout@v6
       - run: bazel test ... ${{ matrix.bzlopts }}
+        if: ${{ !matrix.coverage }}
+      - run: bazel coverage ... ${{ matrix.bzlopts }}
+        if: ${{ matrix.coverage }}
+      - run: lcov --summary bazel-out/_coverage/_coverage_report.dat
+        if: ${{ matrix.coverage }}
+      - name: Upload
+        # codecov-cli is from https://github.com/getsentry/prevent-cli
+        run: |
+          pipx install codecov-cli==11.2.8
+          codecovcli upload-process --fail-on-error --file bazel-out/_coverage/_coverage_report.dat
+        if: ${{ matrix.coverage }}
       - run: ./bzl/run_fuzz_tests ... ${{ matrix.bzlopts }} -- --timeout_secs=30
         if: ${{ matrix.fuzz }}
 
