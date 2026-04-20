@@ -8,17 +8,31 @@
 #include "starlark/ast.h"
 
 #include <cstdint>
+#include <functional>
 #include <map>
 #include <optional>
 #include <string>
+#include <utility>
 #include <variant>
 #include <vector>
 
 namespace starlark {
 
+struct Value;
+struct NativeArgument;
+
+using NativeFn = std::function<std::optional<Value>(std::vector<NativeArgument>)>;
+using NativeFnPtr = std::shared_ptr<NativeFn>;
+
 struct Value {
-    std::variant<std::int64_t, std::string, std::vector<Value>> v;
+    std::variant<std::int64_t, std::string, std::vector<Value>, NativeFnPtr> v;
     constexpr bool operator==(Value const &) const = default;
+};
+
+struct NativeArgument {
+    std::optional<std::string> name;
+    Value value;
+    constexpr bool operator==(NativeArgument const &) const = default;
 };
 
 // TODO(robinlinden): Error-handling.
@@ -132,6 +146,39 @@ class Interpreter {
         }
 
         return std::nullopt;
+    }
+
+    std::optional<Value> run(CallExpr const &ce) {
+        auto maybe_target = run(*ce.target);
+        if (!maybe_target) {
+            return std::nullopt;
+        }
+
+        auto const *target = std::get_if<NativeFnPtr>(&maybe_target->v);
+        if (target == nullptr) {
+            return std::nullopt;
+        }
+
+        std::vector<NativeArgument> native_args;
+        native_args.reserve(ce.args.size());
+        for (auto const &arg : ce.args) {
+            auto name = [&] -> std::optional<std::string> {
+                if (!arg.name.has_value()) {
+                    return std::nullopt;
+                }
+
+                return arg.name->name;
+            }();
+
+            auto val = run(arg.expr);
+            if (!val) {
+                return std::nullopt;
+            }
+
+            native_args.emplace_back(std::move(name), std::move(*val));
+        }
+
+        return (**target)(std::move(native_args));
     }
 };
 

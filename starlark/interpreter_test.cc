@@ -168,5 +168,64 @@ int main() {
         a.expect_eq(run(slice_expr), std::nullopt);
     });
 
+    s.add_test("CallExpr, native function", [](etest::IActions &a) {
+        Interpreter i;
+        bool called = false;
+        i.variables["native"] =
+            Value{std::make_shared<NativeFn>([&](auto const &) -> std::optional<Value> {
+                called = true;
+                return Value{42};
+            })};
+
+        auto call = CallExpr{
+            .target = std::make_shared<Expression>(Identifier{"native"}),
+            .args{},
+        };
+
+        a.expect_eq(i.run(call), Value{42});
+        a.expect_eq(called, true);
+    });
+
+    s.add_test("CallExpr, native function, with args", [](etest::IActions &a) {
+        Interpreter i;
+        i.variables["native"] =
+            Value{std::make_shared<NativeFn>([&](auto const &args) -> std::optional<Value> {
+                a.expect_eq(args.at(0), NativeArgument{.value = Value{"first"}});
+                a.expect_eq(args.at(1), NativeArgument{.value = Value{2}});
+                a.expect_eq(args.at(2), NativeArgument{.name = "third", .value = Value{"3!"}});
+                return Value{19};
+            })};
+
+        auto call = CallExpr{
+            .target = std::make_shared<Expression>(Identifier{"native"}),
+            .args{
+                Argument{.expr = StringLiteral{"first"}},
+                Argument{.expr = IntLiteral{2}},
+                Argument{.name = Identifier{"third"}, .expr = StringLiteral{"3!"}},
+            },
+        };
+
+        a.expect_eq(i.run(call), Value{19});
+    });
+
+    s.add_test("CallExpr, error handling", [](etest::IActions &a) {
+        CallExpr call{.target = std::make_shared<Expression>(Identifier{"fn"})};
+
+        // Non-existent function.
+        a.expect_eq(run(call), std::nullopt);
+
+        // Calling non-function.
+        Interpreter i;
+        i.variables["fn"] = Value{42};
+        a.expect_eq(i.run(call), std::nullopt);
+
+        // Error evaluating arguments.
+        i.variables["fn"] =
+            Value{std::make_shared<NativeFn>([](auto const &) { return Value{1}; })};
+        a.expect_eq(i.run(call), Value{1});
+        call.args.push_back(Argument{.expr = Identifier{"hi"}});
+        a.expect_eq(i.run(call), std::nullopt);
+    });
+
     return s.run();
 }
