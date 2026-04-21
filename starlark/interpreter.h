@@ -50,15 +50,6 @@ class Interpreter {
         return result;
     }
 
-    std::optional<Value> run(auto const &) {
-        // TODO(robinlinden): Delete this.
-        return std::nullopt;
-    }
-
-    std::optional<Value> run(Statement const &stmt) {
-        return std::visit([this](auto const &s) { return run(s); }, stmt);
-    }
-
     std::optional<Value> run(AssignStmt const &stmt) {
         auto value = run(stmt.value);
         if (!value) {
@@ -179,6 +170,11 @@ class Interpreter {
         }
 
         return (**target)(std::move(native_args));
+    }
+
+    std::optional<Value> run(LoadStmt const &load) {
+        std::ignore = load; // TODO(robinlinden): Implement.
+        return Value{};
     }
 };
 
