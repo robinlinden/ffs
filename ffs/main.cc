@@ -62,8 +62,8 @@ build_files_from_pattern(std::filesystem::path const &from, std::string_view pat
 
     std::vector<std::filesystem::path> found;
     for (auto const &dir : std::filesystem::recursive_directory_iterator{from}) {
-        if (std::filesystem::exists(dir.path() / "BUILD.bazel")) {
-            found.push_back(dir.path() / "BUILD.bazel");
+        if (dir.path().filename() == "BUILD.bazel") {
+            found.push_back(dir);
         }
     }
 
