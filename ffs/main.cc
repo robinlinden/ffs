@@ -55,12 +55,6 @@ build_files_from_pattern(std::filesystem::path const &from, std::string_view pat
         return std::nullopt;
     }
 
-    auto root_path = project_root(from);
-    if (!root_path) {
-        std::cerr << "Unable to find ffs project root for folder '" << from << "'.\n";
-        return std::nullopt;
-    }
-
     std::vector<std::filesystem::path> found;
     for (auto const &dir : std::filesystem::recursive_directory_iterator{from}) {
         if (dir.path().filename() == "BUILD.bazel") {
