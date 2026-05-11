@@ -2,21 +2,21 @@
 
 module(name = "ffs")
 
-bazel_dep(name = "platforms", version = "1.0.0")
-bazel_dep(name = "rules_cc", version = "0.2.16")
+bazel_dep(name = "platforms", version = "1.1.0")
+bazel_dep(name = "rules_cc", version = "0.2.18")
 bazel_dep(name = "rules_fuzzing", version = "0.6.0")
 bazel_dep(name = "hastur")
 archive_override(
     module_name = "hastur",
-    integrity = "sha256-7l7t+lC1r8jI4eveEuPmNoGwFlVPi/O7ID2Ysv7KlX4=",
+    integrity = "sha256-gKPPAga5Rp+ExC8nkDAIAgv1KBxB1Z2PWQKQZvXsmQ0=",
     # TODO(robinlinden): Make depending on Hastur easier.
     patch_cmds = [
         """cat <<EOF >MODULE.bazel
 module(name = "hastur")
-bazel_dep(name = "rules_cc", version = "0.2.16")
-bazel_dep(name = "rules_shell", version = "0.5.0")
+bazel_dep(name = "rules_cc", version = "0.2.18")
+bazel_dep(name = "rules_shell", version = "0.8.0")
 EOF""",
     ],
-    strip_prefix = "hastur-07b060f5cf4aa90b2007b33f249310da7092be58",
-    url = "https://github.com/robinlinden/hastur/archive/07b060f5cf4aa90b2007b33f249310da7092be58.tar.gz",
+    strip_prefix = "hastur-c3d3425ad5fcc80289ea83217e51af89bbcc021c",
+    url = "https://github.com/robinlinden/hastur/archive/c3d3425ad5fcc80289ea83217e51af89bbcc021c.tar.gz",
 )
