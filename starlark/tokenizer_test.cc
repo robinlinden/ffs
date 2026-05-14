@@ -68,6 +68,14 @@ world""")",
 world''')",
                 Tokens{t::StringLiteral{"hello\nworld"}},
             },
+            {
+                "hello\nworld",
+                Tokens{
+                    t::Identifier{"hello"},
+                    t::Newline{},
+                    t::Identifier{"world"},
+                },
+            },
         });
 
     etest::Suite s{};

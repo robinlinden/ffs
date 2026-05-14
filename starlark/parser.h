@@ -25,6 +25,7 @@ class Parser {
 
     std::optional<Program> parse() {
         Program program;
+        bool needs_newline = false;
 
         for (auto maybe_token = next_token(); maybe_token; maybe_token = next_token()) {
             auto &token = *maybe_token;
@@ -32,6 +33,22 @@ class Parser {
             if (std::holds_alternative<token::Eof>(token)) {
                 return program;
             }
+
+            if (std::exchange(needs_newline, false)) {
+                if (!std::holds_alternative<token::Newline>(token)) {
+                    std::cerr << "Expected newline after previous statement, but got: "
+                              << to_string(token) << '\n';
+                    return std::nullopt;
+                }
+
+                continue;
+            }
+
+            if (std::holds_alternative<token::Newline>(token)) {
+                continue;
+            }
+
+            needs_newline = true;
 
             if (std::holds_alternative<token::Load>(token)) {
                 auto load = parse_load_stmt();
@@ -97,6 +114,19 @@ class Parser {
         return tokenizer_.tokenize();
     }
 
+    std::optional<Token> next_non_newline_token() {
+        while (true) {
+            auto token = next_token();
+            if (!token) {
+                return std::nullopt;
+            }
+
+            if (!std::holds_alternative<token::Newline>(*token)) {
+                return token;
+            }
+        }
+    }
+
     void reconsume(Token token) { peeked_token_ = std::move(token); }
 
     std::optional<Expression> parse_operand(Token &token) {
@@ -115,7 +145,7 @@ class Parser {
         if (std::holds_alternative<token::LBracket>(token)) {
             std::vector<Expression> elements;
             while (true) {
-                auto maybe_token = next_token();
+                auto maybe_token = next_non_newline_token();
                 if (!maybe_token) {
                     std::cerr << "Tokenization error in list expression.\n";
                     return std::nullopt;
@@ -134,22 +164,22 @@ class Parser {
                 }
 
                 // On the first iteration, we check if this is a list comprehension.
-                auto maybe_next = next_token();
+                auto maybe_next = next_non_newline_token();
                 if (elements.empty() && maybe_next.has_value() &&
                     std::holds_alternative<token::For>(*maybe_next)) {
-                    auto var_token = next_token();
+                    auto var_token = next_non_newline_token();
                     if (!var_token || !std::holds_alternative<token::Identifier>(*var_token)) {
                         std::cerr << "Expected identifier in list comprehension.\n";
                         return std::nullopt;
                     }
 
-                    auto in_token = next_token();
+                    auto in_token = next_non_newline_token();
                     if (!in_token || !std::holds_alternative<token::In>(*in_token)) {
                         std::cerr << "Expected 'in' in list comprehension.\n";
                         return std::nullopt;
                     }
 
-                    auto iterable_token = next_token();
+                    auto iterable_token = next_non_newline_token();
                     if (!iterable_token) {
                         std::cerr << "Unexpected end of input in list comprehension.\n";
                         return std::nullopt;
@@ -161,7 +191,7 @@ class Parser {
                         return std::nullopt;
                     }
 
-                    auto maybe_closing = next_token();
+                    auto maybe_closing = next_non_newline_token();
                     if (!maybe_closing ||
                         !std::holds_alternative<token::RBracket>(*maybe_closing)) {
                         std::cerr << "Expected closing ']' in list comprehension.\n";
@@ -206,7 +236,7 @@ class Parser {
             std::vector<std::pair<Expression, Expression>> entries;
 
             while (true) {
-                auto maybe_token = next_token();
+                auto maybe_token = next_non_newline_token();
                 if (!maybe_token) {
                     std::cerr << "Tokenization error in dict expression.\n";
                     return std::nullopt;
@@ -224,13 +254,13 @@ class Parser {
                     return std::nullopt;
                 }
 
-                auto colon_token = next_token();
+                auto colon_token = next_non_newline_token();
                 if (!colon_token || !std::holds_alternative<token::Colon>(*colon_token)) {
                     std::cerr << "Expected ':' after dict key.\n";
                     return std::nullopt;
                 }
 
-                auto value_token = next_token();
+                auto value_token = next_non_newline_token();
                 if (!value_token) {
                     std::cerr << "Unexpected end of input in dict expression.\n";
                     return std::nullopt;
@@ -244,7 +274,7 @@ class Parser {
 
                 entries.emplace_back(std::move(*key_expr), std::move(*value_expr));
 
-                auto maybe_next = next_token();
+                auto maybe_next = next_non_newline_token();
                 if (!maybe_next) {
                     std::cerr << "Tokenization error in dict expression.\n";
                     return std::nullopt;
@@ -350,7 +380,7 @@ class Parser {
         bool seen_kw_arg = false;
 
         while (true) {
-            auto maybe_token = next_token();
+            auto maybe_token = next_non_newline_token();
             if (!maybe_token) {
                 std::cerr << "Unexpected end of input in argument list.\n";
                 return std::nullopt;
@@ -366,7 +396,7 @@ class Parser {
                 }
 
                 if (std::holds_alternative<token::Comma>(token)) {
-                    maybe_token = next_token();
+                    maybe_token = next_non_newline_token();
                     if (!maybe_token) {
                         std::cerr << "Unexpected end of input in argument list.\n";
                         return std::nullopt;
@@ -385,7 +415,7 @@ class Parser {
             Expression &expr = arg.expr;
 
             if (auto *ident = std::get_if<token::Identifier>(&token)) {
-                auto next = next_token();
+                auto next = next_non_newline_token();
                 if (!next) {
                     std::cerr << "Unexpected end of input in argument list.\n";
                     return std::nullopt;
@@ -395,7 +425,7 @@ class Parser {
                     seen_kw_arg = true;
                     name = Identifier{.name = std::move(ident->name)};
 
-                    auto value_token = next_token();
+                    auto value_token = next_non_newline_token();
                     if (!value_token) {
                         std::cerr << "Unexpected end of input in argument list.\n";
                         return std::nullopt;

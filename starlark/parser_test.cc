@@ -168,6 +168,33 @@ int main() {
             },
         },
         {
+            "{\n42\n:\nbar\n,\nbaz()\n:\n13\n}",
+            starlark::Program{
+                .statements{
+                    starlark::ExpressionStmt{
+                        .expr{
+                            starlark::DictExpr{
+                                .entries{
+                                    {
+                                        starlark::IntLiteral{42},
+                                        starlark::Identifier{"bar"},
+                                    },
+                                    {
+                                        starlark::CallExpr{
+                                            .target = std::make_shared<starlark::Expression>(
+                                                starlark::Identifier{"baz"}),
+                                            .args{},
+                                        },
+                                        starlark::IntLiteral{13},
+                                    },
+                                },
+                            },
+                        },
+                    },
+                },
+            },
+        },
+        {
             "{}",
             starlark::Program{
                 .statements{
@@ -175,6 +202,72 @@ int main() {
                         .expr{
                             starlark::DictExpr{
                                 .entries{},
+                            },
+                        },
+                    },
+                },
+            },
+        },
+        {
+            "[]",
+            starlark::Program{
+                .statements{
+                    starlark::ExpressionStmt{
+                        .expr{
+                            starlark::ListExpr{
+                                .elements{},
+                            },
+                        },
+                    },
+                },
+            },
+        },
+        {
+            R"(["foo"])",
+            starlark::Program{
+                .statements{
+                    starlark::ExpressionStmt{
+                        .expr{
+                            starlark::ListExpr{
+                                .elements{
+                                    starlark::Expression{starlark::StringLiteral{"foo"}},
+                                },
+                            },
+                        },
+                    },
+                },
+            },
+        },
+        {
+            "[x, y, z]",
+            starlark::Program{
+                .statements{
+                    starlark::ExpressionStmt{
+                        .expr{
+                            starlark::ListExpr{
+                                .elements{
+                                    starlark::Expression{starlark::Identifier{"x"}},
+                                    starlark::Expression{starlark::Identifier{"y"}},
+                                    starlark::Expression{starlark::Identifier{"z"}},
+                                },
+                            },
+                        },
+                    },
+                },
+            },
+        },
+        {
+            "[\nx\n,\ny\n,\nz\n]",
+            starlark::Program{
+                .statements{
+                    starlark::ExpressionStmt{
+                        .expr{
+                            starlark::ListExpr{
+                                .elements{
+                                    starlark::Expression{starlark::Identifier{"x"}},
+                                    starlark::Expression{starlark::Identifier{"y"}},
+                                    starlark::Expression{starlark::Identifier{"z"}},
+                                },
                             },
                         },
                     },
@@ -260,6 +353,16 @@ int main() {
             },
         },
         {
+            "42\n",
+            starlark::Program{
+                .statements{
+                    starlark::ExpressionStmt{
+                        .expr{starlark::IntLiteral{42}},
+                    },
+                },
+            },
+        },
+        {
             "42[5]",
             starlark::Program{
                 .statements{
@@ -273,6 +376,23 @@ int main() {
                             },
                         },
                     },
+                },
+            },
+        },
+        {
+            "42\n[5]",
+            starlark::Program{
+                .statements{
+                    starlark::ExpressionStmt{
+                        .expr{starlark::IntLiteral{42}},
+                    },
+                    starlark::ExpressionStmt{.expr{
+                        starlark::ListExpr{
+                            .elements{
+                                starlark::Expression{starlark::IntLiteral{5}},
+                            },
+                        },
+                    }},
                 },
             },
         },
@@ -383,6 +503,10 @@ int main() {
         "foo.",
         // Invalid member name.
         "foo.5",
+
+        // ExpressionStmt
+        // Statements must be newline-separated.
+        "42 42",
     });
 
     etest::Suite s{};

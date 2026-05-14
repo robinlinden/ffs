@@ -33,6 +33,11 @@ class Tokenizer {
             return token::Eof{};
         }
 
+        if (input_[pos_] == '\n') {
+            ++pos_;
+            return token::Newline{};
+        }
+
         if (input_.substr(pos_, 3) == R"(""")") {
             return tokenize_multiline_string('"');
         }
@@ -62,7 +67,7 @@ class Tokenizer {
     }
 
   private:
-    bool is_whitespace(char c) const { return c == ' ' || c == '\t' || c == '\n' || c == '\r'; }
+    bool is_whitespace(char c) const { return c == ' ' || c == '\t' || c == '\r'; }
 
     bool is_alpha(char c) const {
         return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_';
