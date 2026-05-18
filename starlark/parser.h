@@ -20,7 +20,7 @@
 namespace starlark {
 
 class Parser {
-  public:
+public:
     explicit Parser(std::string_view input) : tokenizer_{input} {}
 
     std::optional<Program> parse() {
@@ -102,7 +102,7 @@ class Parser {
         return std::nullopt;
     }
 
-  private:
+private:
     Tokenizer tokenizer_;
     std::optional<Token> peeked_token_;
 

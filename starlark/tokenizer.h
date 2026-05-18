@@ -23,7 +23,7 @@
 namespace starlark {
 
 class Tokenizer {
-  public:
+public:
     explicit Tokenizer(std::string_view input) : input_(input) {}
 
     std::optional<Token> tokenize() {
@@ -66,7 +66,7 @@ class Tokenizer {
         return tokenize_punctuator();
     }
 
-  private:
+private:
     bool is_whitespace(char c) const { return c == ' ' || c == '\t' || c == '\r'; }
 
     bool is_alpha(char c) const {

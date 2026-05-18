@@ -37,7 +37,7 @@ struct NativeArgument {
 
 // TODO(robinlinden): Error-handling.
 class Interpreter {
-  public:
+public:
     std::map<std::string, Value> variables;
 
     std::optional<Value> run(Program const &program) {
