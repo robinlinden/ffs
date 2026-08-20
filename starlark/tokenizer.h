@@ -27,14 +27,54 @@ public:
     explicit Tokenizer(std::string_view input) : input_(input) {}
 
     std::optional<Token> tokenize() {
+        if (!pending_tokens_.empty()) {
+            auto token = pending_tokens_.back();
+            pending_tokens_.pop_back();
+            return token;
+        }
+
+        // If we are starting a new line and find a non-whitespace/comment
+        // character, we check for an indentation change.
+        while (std::exchange(at_line_start_, false)) {
+            std::size_t current_indent = 0;
+            while (pos_ < input_.size() && input_[pos_] == ' ') {
+                ++current_indent;
+                ++pos_;
+            }
+
+            if (pos_ < input_.size() && input_[pos_] == '#') {
+                while (pos_ < input_.size() && input_[pos_] != '\n') {
+                    ++pos_;
+                }
+
+                ++pos_;
+                at_line_start_ = true;
+            } else if (pos_ < input_.size() && input_[pos_] != '\n') {
+                handle_indent_change(current_indent);
+
+                if (!pending_tokens_.empty()) {
+                    auto token = pending_tokens_.back();
+                    pending_tokens_.pop_back();
+                    return token;
+                }
+            }
+        }
+
         skip_comments_and_whitespace();
 
+        // At EOF, emit dedents for all remaining indentation levels.
         if (pos_ >= input_.size()) {
+            if (indent_stack_.size() > 1) {
+                indent_stack_.pop_back();
+                return token::Dedent{};
+            }
+
             return token::Eof{};
         }
 
         if (input_[pos_] == '\n') {
             ++pos_;
+            at_line_start_ = true;
             return token::Newline{};
         }
 
@@ -87,6 +127,21 @@ private:
                 while (pos_ < input_.size() && input_[pos_] != '\n') {
                     ++pos_;
                 }
+            }
+        }
+    }
+
+    void handle_indent_change(std::size_t current_indent) {
+        assert(!indent_stack_.empty());
+        std::size_t previous_indent = indent_stack_.back();
+
+        if (current_indent > previous_indent) {
+            indent_stack_.push_back(current_indent);
+            pending_tokens_.push_back(token::Indent{});
+        } else if (current_indent < previous_indent) {
+            while (!indent_stack_.empty() && indent_stack_.back() > current_indent) {
+                indent_stack_.pop_back();
+                pending_tokens_.push_back(token::Dedent{});
             }
         }
     }
@@ -289,6 +344,9 @@ private:
 
     std::string_view input_;
     std::size_t pos_ = 0;
+    std::vector<std::size_t> indent_stack_{0};
+    std::vector<Token> pending_tokens_;
+    bool at_line_start_{true};
 };
 
 inline std::optional<std::vector<Token>> tokenize(std::string_view input) {

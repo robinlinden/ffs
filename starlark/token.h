@@ -326,6 +326,18 @@ struct StringLiteral {
 
 inline std::string to_string(StringLiteral const &str) { return std::format(R"("{}")", str.value); }
 
+struct Indent {
+    constexpr bool operator==(Indent const &) const = default;
+};
+
+constexpr std::string_view to_string(Indent const &) { return "<indent>"; }
+
+struct Dedent {
+    constexpr bool operator==(Dedent const &) const = default;
+};
+
+constexpr std::string_view to_string(Dedent const &) { return "<dedent>"; }
+
 struct Newline {
     constexpr bool operator==(Newline const &) const = default;
 };
@@ -400,6 +412,8 @@ using Token = std::variant<
     token::Identifier,
     token::IntLiteral,
     token::StringLiteral,
+    token::Indent,
+    token::Dedent,
     token::Newline,
     token::Eof>;
 

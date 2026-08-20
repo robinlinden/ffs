@@ -257,7 +257,7 @@ int main() {
             },
         },
         {
-            "[\nx\n,\ny\n,\nz\n]",
+            "[\nx\n,     \n        y           \n         ,\nz\n]",
             starlark::Program{
                 .statements{
                     starlark::ExpressionStmt{
@@ -507,6 +507,9 @@ int main() {
         // ExpressionStmt
         // Statements must be newline-separated.
         "42 42",
+
+        // Bad indentation.
+        "    x = 1",
     });
 
     etest::Suite s{};
