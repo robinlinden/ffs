@@ -327,6 +327,62 @@ int main() {
             },
         },
         {
+            "def foo(x, y):\n    z = x\n    y\n",
+            starlark::Program{
+                .statements{
+                    starlark::DefStmt{
+                        .name = starlark::Identifier{"foo"},
+                        .params{
+                            starlark::Identifier{"x"},
+                            starlark::Identifier{"y"},
+                        },
+                        .body{
+                            starlark::AssignStmt{
+                                .target = starlark::Identifier{"z"},
+                                .value = starlark::Identifier{"x"},
+                            },
+                            starlark::ExpressionStmt{.expr = starlark::Identifier{"y"}},
+                        },
+                    },
+                },
+            },
+        },
+        {
+            "def foo():\n    1\n",
+            starlark::Program{
+                .statements{
+                    starlark::DefStmt{
+                        .name = starlark::Identifier{"foo"},
+                        .params{},
+                        .body{
+                            starlark::ExpressionStmt{.expr = starlark::IntLiteral{1}},
+                        },
+                    },
+                },
+            },
+        },
+        {
+            "def foo():\n    def bar():\n        1\n    2\n",
+            starlark::Program{
+                .statements{
+                    starlark::DefStmt{
+                        .name = starlark::Identifier{"foo"},
+                        .params{},
+                        .body{
+                            starlark::DefStmt{
+                                .name = starlark::Identifier{"bar"},
+                                .params{},
+                                .body{
+                                    starlark::ExpressionStmt{.expr = starlark::IntLiteral{1}},
+                                },
+                            },
+                            starlark::ExpressionStmt{.expr = starlark::IntLiteral{2}},
+                        },
+                    },
+                },
+            },
+        },
+        {
             R"("foo"())",
             starlark::Program{
                 .statements{
