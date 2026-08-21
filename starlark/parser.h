@@ -50,53 +50,14 @@ public:
 
             needs_newline = true;
 
-            if (std::holds_alternative<token::Load>(token)) {
-                auto load = parse_load_stmt();
-                if (!load) {
-                    std::cerr << "Failed to parse load statement.\n";
-                    return std::nullopt;
-                }
-
-                program.statements.push_back(std::move(*load));
-                continue;
+            auto stmt = parse_statement(token);
+            if (!stmt) {
+                std::cerr << "Failed to parse statement starting with token: " << to_string(token)
+                          << '\n';
+                return std::nullopt;
             }
 
-            if (auto expr = parse_expression(token); expr.has_value()) {
-                auto next = next_token();
-                if (next.has_value() && std::holds_alternative<token::Equals>(*next)) {
-                    if (!std::holds_alternative<Identifier>(*expr)) {
-                        std::cerr << "Left-hand side of assignment must be an identifier.\n";
-                        return std::nullopt;
-                    }
-
-                    auto rhs_token = next_token();
-                    if (!rhs_token) {
-                        std::cerr << "Unexpected end of input in assignment.\n";
-                        return std::nullopt;
-                    }
-
-                    auto rhs = parse_expression(*rhs_token);
-                    if (!rhs) {
-                        std::cerr << "Failed to parse right-hand side of assignment.\n";
-                        return std::nullopt;
-                    }
-
-                    program.statements.push_back(
-                        AssignStmt{
-                            .target = std::move(std::get<Identifier>(*expr)),
-                            .value = std::move(*rhs),
-                        });
-                    continue;
-                } else if (next.has_value()) {
-                    reconsume(std::move(*next));
-                }
-
-                program.statements.push_back(ExpressionStmt{.expr = std::move(*expr)});
-                continue;
-            }
-
-            std::cerr << "Unexpected token: " << to_string(token) << '\n';
-            return std::nullopt;
+            program.statements.push_back(std::move(*stmt));
         }
 
         return std::nullopt;
@@ -465,6 +426,53 @@ private:
         }
 
         return args;
+    }
+
+    std::optional<Statement> parse_statement(Token &token) {
+        if (std::holds_alternative<token::Load>(token)) {
+            auto load = parse_load_stmt();
+            if (!load) {
+                std::cerr << "Failed to parse load statement.\n";
+                return std::nullopt;
+            }
+            return Statement{std::move(*load)};
+        }
+
+        if (auto expr = parse_expression(token); expr.has_value()) {
+            auto next = next_token();
+            if (next.has_value() && std::holds_alternative<token::Equals>(*next)) {
+                if (!std::holds_alternative<Identifier>(*expr)) {
+                    std::cerr << "Left-hand side of assignment must be an identifier.\n";
+                    return std::nullopt;
+                }
+
+                auto rhs_token = next_token();
+                if (!rhs_token) {
+                    std::cerr << "Unexpected end of input in assignment.\n";
+                    return std::nullopt;
+                }
+
+                auto rhs = parse_expression(*rhs_token);
+                if (!rhs) {
+                    std::cerr << "Failed to parse right-hand side of assignment.\n";
+                    return std::nullopt;
+                }
+
+                return Statement{AssignStmt{
+                    .target = std::move(std::get<Identifier>(*expr)),
+                    .value = std::move(*rhs),
+                }};
+            }
+
+            if (next.has_value()) {
+                reconsume(std::move(*next));
+            }
+
+            return Statement{ExpressionStmt{.expr = std::move(*expr)}};
+        }
+
+        std::cerr << "Unexpected token in statement: " << to_string(token) << ".\n";
+        return std::nullopt;
     }
 
     // LoadStmt = 'load' '(' string {',' [identifier '='] string} [','] ')' .
