@@ -129,7 +129,15 @@ struct LoadStmt {
     constexpr bool operator==(LoadStmt const &) const = default;
 };
 
-using Statement = std::variant<AssignStmt, LoadStmt, ExpressionStmt>;
+struct DefStmt;
+using Statement = std::variant<AssignStmt, DefStmt, LoadStmt, ExpressionStmt>;
+
+struct DefStmt {
+    Identifier name;
+    std::vector<Identifier> params;
+    std::vector<Statement> body;
+    constexpr bool operator==(DefStmt const &) const = default;
+};
 
 struct Program {
     std::vector<Statement> statements;

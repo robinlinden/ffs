@@ -438,6 +438,16 @@ private:
             return Statement{std::move(*load)};
         }
 
+        if (std::holds_alternative<token::Def>(token)) {
+            auto def = parse_def_stmt();
+            if (!def) {
+                std::cerr << "Failed to parse def statement.\n";
+                return std::nullopt;
+            }
+
+            return Statement{std::move(*def)};
+        }
+
         if (auto expr = parse_expression(token); expr.has_value()) {
             auto next = next_token();
             if (next.has_value() && std::holds_alternative<token::Equals>(*next)) {
@@ -473,6 +483,121 @@ private:
 
         std::cerr << "Unexpected token in statement: " << to_string(token) << ".\n";
         return std::nullopt;
+    }
+
+    std::optional<DefStmt> parse_def_stmt() {
+        auto name = next_token_as<token::Identifier>();
+        if (!name) {
+            std::cerr << "Expected function name in def statement.\n";
+            return std::nullopt;
+        }
+
+        if (!expect_next_token(token::LParen{})) {
+            return std::nullopt;
+        }
+
+        std::vector<Identifier> params;
+        auto maybe_param = next_token();
+        if (!maybe_param) {
+            std::cerr << "Unexpected end of input in def statement.\n";
+            return std::nullopt;
+        }
+
+        if (!std::holds_alternative<token::RParen>(*maybe_param)) {
+            while (true) {
+                if (!std::holds_alternative<token::Identifier>(*maybe_param)) {
+                    std::cerr << "Expected identifier in def parameter list, got '"
+                              << to_string(*maybe_param) << "'.\n";
+                    return std::nullopt;
+                }
+
+                params.push_back(
+                    Identifier{.name = std::get<token::Identifier>(*maybe_param).name});
+
+                auto maybe_next = next_token();
+                if (!maybe_next) {
+                    std::cerr << "Unexpected end of input in def statement.\n";
+                    return std::nullopt;
+                }
+
+                if (std::holds_alternative<token::RParen>(*maybe_next)) {
+                    break;
+                }
+
+                if (!std::holds_alternative<token::Comma>(*maybe_next)) {
+                    std::cerr << "Expected ',' or ')' in def parameter list, got '"
+                              << to_string(*maybe_next) << "'.\n";
+                    return std::nullopt;
+                }
+
+                maybe_param = next_token();
+                if (!maybe_param) {
+                    std::cerr << "Unexpected end of input in def statement.\n";
+                    return std::nullopt;
+                }
+            }
+        }
+
+        if (!expect_next_token(token::Colon{})) {
+            return std::nullopt;
+        }
+
+        auto maybe_newline = next_token();
+        if (!maybe_newline) {
+            std::cerr << "Unexpected end of input in def statement body.\n";
+            return std::nullopt;
+        }
+
+        if (!std::holds_alternative<token::Newline>(*maybe_newline)) {
+            reconsume(std::move(*maybe_newline));
+        }
+
+        auto body = parse_block();
+        if (!body) {
+            std::cerr << "Failed to parse def statement body.\n";
+            return std::nullopt;
+        }
+
+        return DefStmt{
+            .name = Identifier{.name = std::move(name->name)},
+            .params = std::move(params),
+            .body = std::move(*body),
+        };
+    }
+
+    std::optional<std::vector<Statement>> parse_block() {
+        std::vector<Statement> body;
+
+        auto maybe_indent = next_token();
+        if (!maybe_indent || !std::holds_alternative<token::Indent>(*maybe_indent)) {
+            std::cerr << "Expected indent at start of block.\n";
+            return std::nullopt;
+        }
+
+        while (true) {
+            auto maybe_token = next_token();
+            if (!maybe_token) {
+                std::cerr << "Unexpected end of input in block.\n";
+                return std::nullopt;
+            }
+
+            if (std::holds_alternative<token::Dedent>(*maybe_token)) {
+                break;
+            }
+
+            if (std::holds_alternative<token::Newline>(*maybe_token)) {
+                continue;
+            }
+
+            auto stmt = parse_statement(*maybe_token);
+            if (!stmt) {
+                return std::nullopt;
+            }
+
+            body.push_back(std::move(*stmt));
+        }
+
+        return body;
     }
 
     // LoadStmt = 'load' '(' string {',' [identifier '='] string} [','] ')' .

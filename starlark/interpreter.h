@@ -176,6 +176,11 @@ public:
         std::ignore = load; // TODO(robinlinden): Implement.
         return Value{};
     }
+
+    std::optional<Value> run(DefStmt const &def) {
+        std::ignore = def; // TODO(robinlinden): Implement.
+        return Value{};
+    }
 };
 
 } // namespace starlark
