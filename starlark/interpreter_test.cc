@@ -71,19 +71,50 @@ int main() {
         a.expect_eq(interpreter.run(missing_ident).has_value(), false);
     });
 
-    s.add_test("Program stops at the first failed stmt", [](etest::IActions &a) {
-        auto slice_expr = SliceExpr{
-            .target = std::make_shared<Expression>(CallExpr{
-                .target = std::make_shared<Expression>(Identifier{"no!"}),
-                .args{},
-            }),
-            .index = std::make_shared<Expression>(IntLiteral{0}),
+    s.add_test("LoadStmt", [](etest::IActions &a) {
+        Interpreter i;
+        i.module_loader = [&](std::string_view module_name) {
+            a.expect_eq(module_name, "//:defs.bzl");
+            return ModuleExports{
+                {"original", Value{17}},
+                {"other", Value{"value"}},
+            };
         };
 
+        a.expect_eq(
+            i.run(
+                LoadStmt{
+                    .module_name = "//:defs.bzl",
+                    .symbols{{"alias", "original"}, {"second", "other"}},
+                }),
+            Value{});
+
+        a.expect_eq(i.variables.at("alias"), Value{17});
+        a.expect_eq(i.variables.at("second"), Value{"value"});
+    });
+
+    s.add_test("LoadStmt, missing loader or export", [](etest::IActions &a) {
+        LoadStmt load{
+            .module_name = "//:defs.bzl",
+            .symbols{{"first", "present"}, {"second", "missing"}},
+        };
+
+        Interpreter without_loader;
+        a.expect_eq(without_loader.run(load), std::nullopt);
+
+        Interpreter i;
+        i.variables["first"] = Value{"unchanged"};
+        i.module_loader = [](std::string_view) { return ModuleExports{{"present", Value{1}}}; };
+
+        a.expect_eq(i.run(load), std::nullopt);
+        a.expect_eq(i.variables.at("first"), Value{"unchanged"});
+        a.expect_eq(i.variables.find("second"), i.variables.end());
+    });
+
+    s.add_test("Program stops at the first failed stmt", [](etest::IActions &a) {
         Program program{
             .statements{
-                // LoadStmt{.module_name = "//:missing.bzl", .symbols{{"value", "value"}}},
-                ExpressionStmt{std::move(slice_expr)},
+                LoadStmt{.module_name = "//:missing.bzl", .symbols{{"value", "value"}}},
                 AssignStmt{.target = Identifier{"after_load"}, .value = IntLiteral{1}},
             },
         };

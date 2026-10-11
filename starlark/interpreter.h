@@ -12,6 +12,7 @@
 #include <map>
 #include <optional>
 #include <string>
+#include <string_view>
 #include <utility>
 #include <variant>
 #include <vector>
@@ -35,10 +36,14 @@ struct NativeArgument {
     constexpr bool operator==(NativeArgument const &) const = default;
 };
 
+using ModuleExports = std::map<std::string, Value, std::less<>>;
+using ModuleLoader = std::function<std::optional<ModuleExports>(std::string_view)>;
+
 // TODO(robinlinden): Error-handling.
 class Interpreter {
 public:
     std::map<std::string, Value> variables;
+    ModuleLoader module_loader;
 
     std::optional<Value> run(Program const &program) {
         std::optional<Value> result;
@@ -178,7 +183,30 @@ public:
     }
 
     std::optional<Value> run(LoadStmt const &load) {
-        std::ignore = load; // TODO(robinlinden): Implement.
+        if (!module_loader) {
+            return std::nullopt;
+        }
+
+        auto exports = module_loader(load.module_name);
+        if (!exports) {
+            return std::nullopt;
+        }
+
+        std::vector<std::pair<std::string, Value>> bindings;
+        bindings.reserve(load.symbols.size());
+        for (auto const &[local_name, exported_name] : load.symbols) {
+            auto exported = exports->find(exported_name);
+            if (exported == exports->end()) {
+                return std::nullopt;
+            }
+
+            bindings.emplace_back(local_name, exported->second);
+        }
+
+        for (auto &[local_name, value] : bindings) {
+            variables[local_name] = std::move(value);
+        }
+
         return Value{};
     }
 
