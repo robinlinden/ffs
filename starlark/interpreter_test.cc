@@ -71,6 +71,28 @@ int main() {
         a.expect_eq(interpreter.run(missing_ident).has_value(), false);
     });
 
+    s.add_test("Program stops at the first failed stmt", [](etest::IActions &a) {
+        auto slice_expr = SliceExpr{
+            .target = std::make_shared<Expression>(CallExpr{
+                .target = std::make_shared<Expression>(Identifier{"no!"}),
+                .args{},
+            }),
+            .index = std::make_shared<Expression>(IntLiteral{0}),
+        };
+
+        Program program{
+            .statements{
+                // LoadStmt{.module_name = "//:missing.bzl", .symbols{{"value", "value"}}},
+                ExpressionStmt{std::move(slice_expr)},
+                AssignStmt{.target = Identifier{"after_load"}, .value = IntLiteral{1}},
+            },
+        };
+
+        Interpreter i;
+        a.expect_eq(i.run(program), std::nullopt);
+        a.expect_eq(i.variables.find("after_load"), i.variables.end());
+    });
+
     s.add_test("StringLiteral", [](etest::IActions &a) {
         auto str_lit = StringLiteral{"hello world"};
         a.expect_eq(run(str_lit), Value{std::string{"hello world"}});

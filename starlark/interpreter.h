@@ -44,7 +44,12 @@ public:
         std::optional<Value> result;
 
         for (auto const &stmt : program.statements) {
-            result = std::visit([this](auto const &s) { return run(s); }, stmt);
+            auto stmt_result = std::visit([this](auto const &s) { return run(s); }, stmt);
+            if (!stmt_result) {
+                return std::nullopt;
+            }
+
+            result = std::move(stmt_result);
         }
 
         return result;
