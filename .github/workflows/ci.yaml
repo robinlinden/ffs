@@ -23,12 +23,36 @@ jobs:
             cxx: g++-14
             coverage: true
 
+          - name: linux-gcc-15
+            os: ubuntu-26.04
+            cc: gcc-15
+            cxx: g++-15
+            coverage: true
+            # TODO(robinlinden): investigate
+            # lcov: WARNING: (unsupported) Function begin/end line exclusions
+            # not supported with this version of GCC/gcov; require gcc/9 or
+            # newer: attempting to derive function end lines - see lcovrc man
+            # entry for 'derive_function_end_line'.
+            #
+            # lcov: ERROR: (corrupt) unable to read trace file
+            # 'bazel-out/_coverage/_coverage_report.dat': lcov: ERROR:
+            # (inconsistent) "starlark/token.h":306: function
+            # '_ZN8starlark5token9to_stringENS0_6ReturnE' is not hit but line
+            # 309 is.
+            lcovopts: --ignore-errors unsupported --ignore-errors inconsistent
+
           - name: linux-clang-18
             os: ubuntu-24.04
             cc: clang-18
             cxx: clang++-18
             fuzz: true
             bzlopts: "--config libfuzzer --config asan --config ubsan"
+
+          - name: linux-clang-22
+            os: ubuntu-26.04
+            cc: clang-22
+            cxx: clang++-22
+            fuzz: true
 
           - name: windows-msvc
             os: windows-2025
@@ -46,7 +70,7 @@ jobs:
         if: ${{ !matrix.coverage }}
       - run: bazel coverage ... ${{ matrix.bzlopts }}
         if: ${{ matrix.coverage }}
-      - run: lcov --summary bazel-out/_coverage/_coverage_report.dat
+      - run: lcov ${{ matrix.lcovopts }} --summary bazel-out/_coverage/_coverage_report.dat
         if: ${{ matrix.coverage }}
       - name: Upload
         # codecov-cli is from https://github.com/getsentry/prevent-cli
