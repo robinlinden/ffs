@@ -84,25 +84,34 @@ std::optional<std::vector<Target>> targets_from_build_file(std::filesystem::path
 
     std::vector<Target> targets;
 
-    starlark::Interpreter interpreter;
+    auto store_target_name = starlark::Value{
+        std::make_shared<starlark::NativeFn>([&](std::vector<starlark::NativeArgument> args) {
+            auto it = std::ranges::find_if(
+                args, [](auto &name) { return name == "name"; }, &starlark::NativeArgument::name);
+            if (it != std::ranges::end(args) && std::holds_alternative<std::string>(it->value.v)) {
+                targets.emplace_back(std::move(std::get<std::string>(it->value.v)));
+            }
 
-    static constexpr auto kIgnore = [](auto const &) { return starlark::Value{}; };
-    auto store_target_name = [&](std::vector<starlark::NativeArgument> args) {
-        auto it = std::ranges::find_if(
-            args, [](auto &name) { return name == "name"; }, &starlark::NativeArgument::name);
-        if (it != std::ranges::end(args) && std::holds_alternative<std::string>(it->value.v)) {
-            targets.emplace_back(std::move(std::get<std::string>(it->value.v)));
-        }
+            return starlark::Value{0};
+        })};
 
-        return starlark::Value{0};
+    starlark::Interpreter interpreter{
+        .variables{},
+        .module_loader = [&](std::string_view module) -> std::optional<starlark::ModuleExports> {
+            if (module.starts_with("@rules_cc/")) {
+                return starlark::ModuleExports{
+                    {"cc_binary", store_target_name},
+                    {"cc_library", store_target_name},
+                    {"cc_test", store_target_name},
+                };
+            }
+
+            std::cerr << "Gave up on loading '" << module << "'.\n";
+            return std::nullopt;
+        },
     };
 
-    interpreter.variables["cc_binary"] =
-        starlark::Value{std::make_shared<starlark::NativeFn>(store_target_name)};
-    interpreter.variables["cc_library"] =
-        starlark::Value{std::make_shared<starlark::NativeFn>(store_target_name)};
-    interpreter.variables["cc_test"] =
-        starlark::Value{std::make_shared<starlark::NativeFn>(store_target_name)};
+    static constexpr auto kIgnore = [](auto const &) { return starlark::Value{}; };
     interpreter.variables["glob"] = starlark::Value{std::make_shared<starlark::NativeFn>(kIgnore)};
 
     auto res = interpreter.run(*program);
