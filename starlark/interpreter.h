@@ -42,7 +42,7 @@ using ModuleLoader = std::function<std::optional<ModuleExports>(std::string_view
 // TODO(robinlinden): Error-handling.
 class Interpreter {
 public:
-    std::map<std::string, Value> variables;
+    std::map<std::string, Value, std::less<>> variables;
     ModuleLoader module_loader;
 
     std::optional<Value> run(Program const &program) {
