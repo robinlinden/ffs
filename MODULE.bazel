@@ -3,30 +3,21 @@
 module(name = "ffs")
 
 bazel_dep(name = "platforms", version = "1.1.0")
-bazel_dep(name = "rules_cc", version = "0.2.18")
-single_version_override(
-    module_name = "rules_cc",
-    patch_cmds = [
-        # Fix rules_cc passing the deprecated and removed /DEBUG:FASTLINK flag to MSVC.
-        # https://github.com/bazelbuild/rules_cc/issues/558
-        """sed -i 's|/DEBUG:FASTLINK|/DEBUG:FULL|' cc/private/toolchain/windows_cc_configure.bzl""",
-    ],
-    version = "0.2.18",
-)
+bazel_dep(name = "rules_cc", version = "0.2.27")
+bazel_dep(name = "rules_fuzzing", version = "0.8.0")
 
-bazel_dep(name = "rules_fuzzing", version = "0.6.0")
+# TODO(robinlinden): Make depending on Hastur easier.
 bazel_dep(name = "hastur")
 archive_override(
     module_name = "hastur",
-    integrity = "sha256-gKPPAga5Rp+ExC8nkDAIAgv1KBxB1Z2PWQKQZvXsmQ0=",
-    # TODO(robinlinden): Make depending on Hastur easier.
+    integrity = "sha256-8fM319gI5WSaL2BqjcFjZJpUCe2WSP+XMiCeo6vltSQ=",
     patch_cmds = [
         """cat <<EOF >MODULE.bazel
 module(name = "hastur")
-bazel_dep(name = "rules_cc", version = "0.2.18")
+bazel_dep(name = "rules_cc", version = "0.2.27")
 bazel_dep(name = "rules_shell", version = "0.8.0")
 EOF""",
     ],
-    strip_prefix = "hastur-c3d3425ad5fcc80289ea83217e51af89bbcc021c",
-    url = "https://github.com/robinlinden/hastur/archive/c3d3425ad5fcc80289ea83217e51af89bbcc021c.tar.gz",
+    strip_components = 1,
+    url = "https://github.com/robinlinden/hastur/archive/d9aeb5d56815d8b6185aa4359813f761cac9181d.tar.gz",
 )
