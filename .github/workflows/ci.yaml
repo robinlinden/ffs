@@ -62,7 +62,7 @@ jobs:
         if: ${{ matrix.cc != '' }}
       - run: sudo apt-get update && sudo apt-get install --assume-yes --no-install-recommends lcov
         if: ${{ matrix.coverage }}
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           # codecov needs the history to know what to compare the coverage to.
           fetch-depth: 0
@@ -73,9 +73,9 @@ jobs:
       - run: lcov ${{ matrix.lcovopts }} --summary bazel-out/_coverage/_coverage_report.dat
         if: ${{ matrix.coverage }}
       - name: Upload
-        # codecov-cli is from https://github.com/getsentry/prevent-cli
+        # https://github.com/codecov/codecov-cli
         run: |
-          pipx install codecov-cli==11.2.8
+          pipx install codecov-cli==11.3.1
           codecovcli upload-process --fail-on-error --file bazel-out/_coverage/_coverage_report.dat
         if: ${{ matrix.coverage }}
       - run: ./bzl/run_fuzz_tests ... ${{ matrix.bzlopts }} -- --timeout_secs=30
@@ -84,14 +84,14 @@ jobs:
   pre-commit:
     runs-on: ubuntu-slim
     steps:
-      - uses: actions/checkout@v6
-      - run: pipx install pre-commit==4.5.1
+      - uses: actions/checkout@v7
+      - run: pipx install pre-commit==4.7.0
       - run: pre-commit run --all-files
 
   clang-format:
     runs-on: ubuntu-slim
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - name: Set up the llvm repository
         run: |
           wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
@@ -103,14 +103,14 @@ jobs:
   buildifier:
     runs-on: ubuntu-slim
     steps:
-      - uses: actions/checkout@v6
-      - run: wget --output-document=buildifier https://github.com/bazelbuild/buildtools/releases/download/v8.5.1/buildifier-linux-amd64 && sudo chmod +x buildifier
+      - uses: actions/checkout@v7
+      - run: wget --output-document=buildifier https://github.com/bazelbuild/buildtools/releases/download/v10.1.0/buildifier-linux-amd64 && sudo chmod +x buildifier
       - run: ./buildifier --lint=warn --warnings=all -mode diff $(find . -type f -iname "*.bazel" -or -iname "*.bzl")
 
   prettier:
     runs-on: ubuntu-slim
     steps:
-      - uses: actions/checkout@v6
-      - run: npm install --global prettier@3.8.1
+      - uses: actions/checkout@v7
+      - run: npm install --global prettier@3.9.10
       - run: npx prettier --ignore-path .gitignore --write .
       - run: git diff --exit-code
