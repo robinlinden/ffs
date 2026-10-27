@@ -106,6 +106,12 @@ std::optional<std::vector<Target>> targets_from_build_file(std::filesystem::path
                 };
             }
 
+            if (module.starts_with("@rules_fuzzing/")) {
+                return starlark::ModuleExports{
+                    {"cc_fuzz_test", store_target_name},
+                };
+            }
+
             std::cerr << "Gave up on loading '" << module << "'.\n";
             return std::nullopt;
         },
