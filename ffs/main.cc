@@ -21,6 +21,15 @@
 
 namespace {
 
+constexpr std::optional<std::pair<std::string_view, std::string_view>>
+split_once(std::string_view str, char sep) {
+    if (auto p = str.find(sep); p != std::string_view::npos) {
+        return std::pair{str.substr(0, p), str.substr(p + 1)};
+    }
+
+    return std::nullopt;
+}
+
 std::string to_string(std::vector<starlark::Token> const &tokens) {
     std::stringstream ss;
 
@@ -94,9 +103,53 @@ std::optional<std::vector<Target>> targets_from_build_file(std::filesystem::path
             return starlark::Value{0};
         })};
 
+    static constexpr auto kIgnore = [](auto const &) { return starlark::Value{}; };
+
     starlark::Interpreter interpreter{
         .variables{},
         .module_loader = [&](std::string_view module) -> std::optional<starlark::ModuleExports> {
+            if (module.starts_with("//")) {
+                auto root = project_root(bf);
+                assert(root.has_value());
+
+                auto split = split_once(module, ':');
+                if (!split) {
+                    std::cerr << "Unable to find filename for '" << module
+                              << "' in module loading.\n";
+                    return std::nullopt;
+                }
+
+                auto [path, file] = *split;
+                auto target = *root / path.substr(2) / file;
+                std::ifstream target_ifs{target};
+                if (!target_ifs) {
+                    std::cerr << "Unable to open '" << target << "'.\n";
+                    return std::nullopt;
+                }
+
+                std::string c{
+                    std::istreambuf_iterator<char>(target_ifs), std::istreambuf_iterator<char>()};
+                auto p = starlark::parse(c);
+                if (!p) {
+                    std::cerr << "Unable to parse '\n" << c << "\n' as a program.\n";
+                    return std::nullopt;
+                }
+
+                starlark::Interpreter i;
+                i.variables["glob"] =
+                    starlark::Value{std::make_shared<starlark::NativeFn>(kIgnore)};
+                i.variables["select"] =
+                    starlark::Value{std::make_shared<starlark::NativeFn>(kIgnore)};
+                auto result = i.run(*p);
+                if (!result) {
+                    std::cerr << "Running '" << target << "' failed: " << to_string(result.error())
+                              << ".\n";
+                    return std::nullopt;
+                }
+
+                return std::move(i.variables);
+            }
+
             if (module.starts_with("@rules_cc/")) {
                 return starlark::ModuleExports{
                     {"cc_binary", store_target_name},
@@ -116,8 +169,9 @@ std::optional<std::vector<Target>> targets_from_build_file(std::filesystem::path
         },
     };
 
-    static constexpr auto kIgnore = [](auto const &) { return starlark::Value{}; };
     interpreter.variables["glob"] = starlark::Value{std::make_shared<starlark::NativeFn>(kIgnore)};
+    interpreter.variables["select"] =
+        starlark::Value{std::make_shared<starlark::NativeFn>(kIgnore)};
 
     auto res = interpreter.run(*program);
     if (!res) {
