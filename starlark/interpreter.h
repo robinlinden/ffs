@@ -8,6 +8,7 @@
 #include "starlark/ast.h"
 
 #include <cstdint>
+#include <expected>
 #include <functional>
 #include <map>
 #include <optional>
@@ -22,7 +23,41 @@ namespace starlark {
 struct Value;
 struct NativeArgument;
 
-using NativeFn = std::function<std::optional<Value>(std::vector<NativeArgument>)>;
+enum class Error {
+    UnknownIdentifier,
+    InvalidSliceTarget,
+    InvalidSliceIndex,
+    SliceIndexOutOfBounds,
+    NotCallable,
+    ModuleLoaderUnavailable,
+    ModuleLoadFailed,
+    MissingExport,
+};
+
+constexpr std::string_view to_string(Error e) {
+    switch (e) {
+    case Error::UnknownIdentifier:
+        return "UnknownIdentifier";
+    case Error::InvalidSliceTarget:
+        return "InvalidSliceTarget";
+    case Error::InvalidSliceIndex:
+        return "InvalidSliceIndex";
+    case Error::SliceIndexOutOfBounds:
+        return "SliceIndexOutOfBounds";
+    case Error::NotCallable:
+        return "NotCallable";
+    case Error::ModuleLoaderUnavailable:
+        return "ModuleLoaderUnavailable";
+    case Error::ModuleLoadFailed:
+        return "ModuleLoadFailed";
+    case Error::MissingExport:
+        return "MissingExport";
+    }
+
+    return "<unknown>";
+}
+
+using NativeFn = std::function<std::expected<Value, Error>(std::vector<NativeArgument>)>;
 using NativeFnPtr = std::shared_ptr<NativeFn>;
 
 struct Value {
@@ -65,19 +100,18 @@ struct NativeArgument {
 using ModuleExports = std::map<std::string, Value, std::less<>>;
 using ModuleLoader = std::function<std::optional<ModuleExports>(std::string_view)>;
 
-// TODO(robinlinden): Error-handling.
 class Interpreter {
 public:
     std::map<std::string, Value, std::less<>> variables;
     ModuleLoader module_loader;
 
-    std::optional<Value> run(Program const &program) {
-        std::optional<Value> result;
+    std::expected<Value, Error> run(Program const &program) {
+        std::expected<Value, Error> result = Value{};
 
         for (auto const &stmt : program.statements) {
             auto stmt_result = std::visit([this](auto const &s) { return run(s); }, stmt);
             if (!stmt_result) {
-                return std::nullopt;
+                return std::unexpected{stmt_result.error()};
             }
 
             result = std::move(stmt_result);
@@ -86,41 +120,42 @@ public:
         return result;
     }
 
-    std::optional<Value> run(AssignStmt const &stmt) {
+    std::expected<Value, Error> run(AssignStmt const &stmt) {
         auto value = run(stmt.value);
         if (!value) {
-            return std::nullopt;
+            return std::unexpected{value.error()};
         }
 
-        return variables[stmt.target.name] = *value;
+        variables[stmt.target.name] = *value;
+        return *value;
     }
 
-    std::optional<Value> run(ExpressionStmt const &stmt) { return run(stmt.expr); }
+    std::expected<Value, Error> run(ExpressionStmt const &stmt) { return run(stmt.expr); }
 
-    std::optional<Value> run(Expression const &expr) {
+    std::expected<Value, Error> run(Expression const &expr) {
         return std::visit([this](auto const &e) { return run(e); }, expr);
     }
 
-    std::optional<Value> run(Identifier const &ident) {
+    std::expected<Value, Error> run(Identifier const &ident) {
         auto it = variables.find(ident.name);
         if (it == variables.end()) {
-            return std::nullopt;
+            return std::unexpected{Error::UnknownIdentifier};
         }
 
         return it->second;
     }
 
-    std::optional<Value> run(StringLiteral const &str) { return Value{str.value}; }
-    std::optional<Value> run(IntLiteral const &i) { return Value{i.value}; }
+    std::expected<Value, Error> run(StringLiteral const &str) { return Value{str.value}; }
+    std::expected<Value, Error> run(IntLiteral const &i) { return Value{i.value}; }
 
-    std::optional<Value> run(ListExpr const &list) {
+    std::expected<Value, Error> run(ListExpr const &list) {
         std::vector<Value> elements;
         elements.reserve(list.elements.size());
 
         for (auto const &elem : list.elements) {
             auto value = run(elem);
             if (!value) {
-                return std::nullopt;
+                return std::unexpected{value.error()};
             }
 
             elements.push_back(std::move(*value));
@@ -129,25 +164,25 @@ public:
         return Value{.v = std::move(elements)};
     }
 
-    std::optional<Value> run(SliceExpr const &se) {
+    std::expected<Value, Error> run(SliceExpr const &se) {
         auto const target = run(*se.target);
         if (!target) {
-            return std::nullopt;
+            return std::unexpected{target.error()};
         }
 
         if (auto const *str = std::get_if<std::string>(&target->v); str != nullptr) {
             auto maybe_idx = run(*se.index);
             if (!maybe_idx) {
-                return std::nullopt;
+                return std::unexpected{maybe_idx.error()};
             }
 
             auto const *idx = std::get_if<std::int64_t>(&maybe_idx->v);
             if (idx == nullptr || *idx < 0) {
-                return std::nullopt;
+                return std::unexpected{Error::InvalidSliceIndex};
             }
 
             if (static_cast<std::uint32_t>(*idx) >= str->size()) {
-                return std::nullopt;
+                return std::unexpected{Error::SliceIndexOutOfBounds};
             }
 
             auto const char_res = (*str)[static_cast<std::uint32_t>(*idx)];
@@ -157,33 +192,33 @@ public:
         if (auto const *list = std::get_if<std::vector<Value>>(&target->v); list != nullptr) {
             auto maybe_idx = run(*se.index);
             if (!maybe_idx) {
-                return std::nullopt;
+                return std::unexpected{maybe_idx.error()};
             }
 
             auto const *idx = std::get_if<std::int64_t>(&maybe_idx->v);
             if (idx == nullptr || *idx < 0) {
-                return std::nullopt;
+                return std::unexpected{Error::InvalidSliceIndex};
             }
 
             if (static_cast<std::uint32_t>(*idx) >= list->size()) {
-                return std::nullopt;
+                return std::unexpected{Error::SliceIndexOutOfBounds};
             }
 
             return Value{(*list)[static_cast<std::uint32_t>(*idx)]};
         }
 
-        return std::nullopt;
+        return std::unexpected{Error::InvalidSliceTarget};
     }
 
-    std::optional<Value> run(CallExpr const &ce) {
+    std::expected<Value, Error> run(CallExpr const &ce) {
         auto maybe_target = run(*ce.target);
         if (!maybe_target) {
-            return std::nullopt;
+            return std::unexpected{maybe_target.error()};
         }
 
         auto const *target = std::get_if<NativeFnPtr>(&maybe_target->v);
         if (target == nullptr) {
-            return std::nullopt;
+            return std::unexpected{Error::NotCallable};
         }
 
         std::vector<NativeArgument> native_args;
@@ -199,7 +234,7 @@ public:
 
             auto val = run(arg.expr);
             if (!val) {
-                return std::nullopt;
+                return std::unexpected{val.error()};
             }
 
             native_args.emplace_back(std::move(name), std::move(*val));
@@ -208,14 +243,14 @@ public:
         return (**target)(std::move(native_args));
     }
 
-    std::optional<Value> run(LoadStmt const &load) {
+    std::expected<Value, Error> run(LoadStmt const &load) {
         if (!module_loader) {
-            return std::nullopt;
+            return std::unexpected{Error::ModuleLoaderUnavailable};
         }
 
         auto exports = module_loader(load.module_name);
         if (!exports) {
-            return std::nullopt;
+            return std::unexpected{Error::ModuleLoadFailed};
         }
 
         std::vector<std::pair<std::string, Value>> bindings;
@@ -223,7 +258,7 @@ public:
         for (auto const &[local_name, exported_name] : load.symbols) {
             auto exported = exports->find(exported_name);
             if (exported == exports->end()) {
-                return std::nullopt;
+                return std::unexpected{Error::MissingExport};
             }
 
             bindings.emplace_back(local_name, exported->second);
@@ -236,7 +271,7 @@ public:
         return Value{};
     }
 
-    std::optional<Value> run(DefStmt const &def) {
+    std::expected<Value, Error> run(DefStmt const &def) {
         std::ignore = def; // TODO(robinlinden): Implement.
         return Value{};
     }

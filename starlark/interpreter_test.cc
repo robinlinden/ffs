@@ -8,7 +8,17 @@
 
 #include "etest/etest2.h"
 
+#include <expected>
+
+namespace {
+
 auto run(auto starlark) { return starlark::Interpreter{}.run(starlark); }
+
+constexpr auto failure(starlark::Error error) {
+    return std::expected<starlark::Value, starlark::Error>{std::unexpected{error}};
+}
+
+} // namespace
 
 int main() {
     using namespace starlark;
@@ -21,7 +31,7 @@ int main() {
         a.expect_eq(
             to_string(Value{std::vector<Value>{{std::int64_t{1}}, {std::int64_t{2}}}}), "[1, 2]");
         a.expect_eq(
-            to_string(Value{std::make_shared<NativeFn>([](auto const &) { return std::nullopt; })}),
+            to_string(Value{std::make_shared<NativeFn>([](auto const &) { return Value{}; })}),
             "[NativeFunction]");
     });
 
@@ -45,7 +55,7 @@ int main() {
         a.expect_eq(run(program), Value{std::string{"hello"}});
 
         // Empty programs are fine too.
-        a.expect_eq(run(Program{.statements{}}), std::nullopt);
+        a.expect_eq(run(Program{.statements{}}), Value{});
     });
 
     s.add_test("AssignStmt", [](etest::IActions &a) {
@@ -78,7 +88,7 @@ int main() {
         a.expect_eq(interpreter.run(ident), Value{std::string{"hello"}});
 
         auto missing_ident = Identifier{"missing"};
-        a.expect_eq(interpreter.run(missing_ident).has_value(), false);
+        a.expect_eq(interpreter.run(missing_ident), failure(Error::UnknownIdentifier));
     });
 
     s.add_test("LoadStmt", [](etest::IActions &a) {
@@ -110,15 +120,23 @@ int main() {
         };
 
         Interpreter without_loader;
-        a.expect_eq(without_loader.run(load), std::nullopt);
+        a.expect_eq(without_loader.run(load), failure(Error::ModuleLoaderUnavailable));
 
         Interpreter i;
         i.variables["first"] = Value{"unchanged"};
         i.module_loader = [](std::string_view) { return ModuleExports{{"present", Value{1}}}; };
 
-        a.expect_eq(i.run(load), std::nullopt);
+        a.expect_eq(i.run(load), failure(Error::MissingExport));
         a.expect_eq(i.variables.at("first"), Value{"unchanged"});
         a.expect_eq(i.variables.find("second"), i.variables.end());
+    });
+
+    s.add_test("LoadStmt, failed module load", [](etest::IActions &a) {
+        Interpreter i;
+        i.module_loader = [](std::string_view) { return std::nullopt; };
+
+        a.expect_eq(
+            i.run(LoadStmt{.module_name = "//:missing.bzl"}), failure(Error::ModuleLoadFailed));
     });
 
     s.add_test("Program stops at the first failed stmt", [](etest::IActions &a) {
@@ -130,7 +148,7 @@ int main() {
         };
 
         Interpreter i;
-        a.expect_eq(i.run(program), std::nullopt);
+        a.expect_eq(i.run(program), failure(Error::ModuleLoaderUnavailable));
         a.expect_eq(i.variables.find("after_load"), i.variables.end());
     });
 
@@ -167,11 +185,11 @@ int main() {
         };
 
         // Error in lhs.
-        a.expect_eq(run(slice_expr), std::nullopt);
+        a.expect_eq(run(slice_expr), failure(Error::UnknownIdentifier));
 
         // Unsupported lhs.
         *slice_expr.target = IntLiteral{13};
-        a.expect_eq(run(slice_expr), std::nullopt);
+        a.expect_eq(run(slice_expr), failure(Error::InvalidSliceTarget));
     });
 
     s.add_test("SliceExpr, string target", [](etest::IActions &a) {
@@ -191,13 +209,13 @@ int main() {
         a.expect_eq(run(slice_expr), Value{"i"});
 
         idx = StringLiteral{"a"};
-        a.expect_eq(run(slice_expr), std::nullopt);
+        a.expect_eq(run(slice_expr), failure(Error::InvalidSliceIndex));
 
         idx = IntLiteral{-1};
-        a.expect_eq(run(slice_expr), std::nullopt);
+        a.expect_eq(run(slice_expr), failure(Error::InvalidSliceIndex));
 
         idx = IntLiteral{2};
-        a.expect_eq(run(slice_expr), std::nullopt);
+        a.expect_eq(run(slice_expr), failure(Error::SliceIndexOutOfBounds));
     });
 
     s.add_test("SliceExpr, list target", [](etest::IActions &a) {
@@ -222,20 +240,20 @@ int main() {
         a.expect_eq(run(slice_expr), Value{2});
 
         idx = StringLiteral{"a"};
-        a.expect_eq(run(slice_expr), std::nullopt);
+        a.expect_eq(run(slice_expr), failure(Error::InvalidSliceIndex));
 
         idx = IntLiteral{-1};
-        a.expect_eq(run(slice_expr), std::nullopt);
+        a.expect_eq(run(slice_expr), failure(Error::InvalidSliceIndex));
 
         idx = IntLiteral{2};
-        a.expect_eq(run(slice_expr), std::nullopt);
+        a.expect_eq(run(slice_expr), failure(Error::SliceIndexOutOfBounds));
     });
 
     s.add_test("CallExpr, native function", [](etest::IActions &a) {
         Interpreter i;
         bool called = false;
         i.variables["native"] =
-            Value{std::make_shared<NativeFn>([&](auto const &) -> std::optional<Value> {
+            Value{std::make_shared<NativeFn>([&](auto const &) -> std::expected<Value, Error> {
                 called = true;
                 return Value{42};
             })};
@@ -252,7 +270,7 @@ int main() {
     s.add_test("CallExpr, native function, with args", [](etest::IActions &a) {
         Interpreter i;
         i.variables["native"] =
-            Value{std::make_shared<NativeFn>([&](auto const &args) -> std::optional<Value> {
+            Value{std::make_shared<NativeFn>([&](auto const &args) -> std::expected<Value, Error> {
                 a.expect_eq(args.at(0), NativeArgument{.value = Value{"first"}});
                 a.expect_eq(args.at(1), NativeArgument{.value = Value{2}});
                 a.expect_eq(args.at(2), NativeArgument{.name = "third", .value = Value{"3!"}});
@@ -275,19 +293,25 @@ int main() {
         CallExpr call{.target = std::make_shared<Expression>(Identifier{"fn"})};
 
         // Non-existent function.
-        a.expect_eq(run(call), std::nullopt);
+        a.expect_eq(run(call), failure(Error::UnknownIdentifier));
 
         // Calling non-function.
         Interpreter i;
         i.variables["fn"] = Value{42};
-        a.expect_eq(i.run(call), std::nullopt);
+        a.expect_eq(i.run(call), failure(Error::NotCallable));
 
         // Error evaluating arguments.
         i.variables["fn"] =
             Value{std::make_shared<NativeFn>([](auto const &) { return Value{1}; })};
         a.expect_eq(i.run(call), Value{1});
         call.args.push_back(Argument{.expr = Identifier{"hi"}});
-        a.expect_eq(i.run(call), std::nullopt);
+        a.expect_eq(i.run(call), failure(Error::UnknownIdentifier));
+        call.args.clear();
+
+        // Error in native function.
+        i.variables["fn"] = Value{std::make_shared<NativeFn>(
+            [](auto const &) { return std::unexpected{Error::NotCallable}; })};
+        a.expect_eq(i.run(call), failure(Error::NotCallable));
     });
 
     return s.run();
