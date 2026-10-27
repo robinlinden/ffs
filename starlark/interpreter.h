@@ -30,6 +30,32 @@ struct Value {
     constexpr bool operator==(Value const &) const = default;
 };
 
+constexpr std::string to_string(Value const &value) {
+    struct ValueStringifier {
+        std::string operator()(std::int64_t v) { return std::to_string(v); }
+        std::string operator()(std::string const &v) { return v; }
+        std::string operator()(std::vector<Value> const &v) {
+            std::string result = "[";
+
+            bool first = true;
+            for (auto const &elem : v) {
+                if (!std::exchange(first, false)) {
+                    result += ", ";
+                }
+
+                result += to_string(elem);
+            }
+
+            result += ']';
+            return result;
+        }
+
+        std::string operator()(NativeFnPtr const &) { return "[NativeFunction]"; }
+    };
+
+    return std::visit(ValueStringifier{}, value.v);
+}
+
 struct NativeArgument {
     std::optional<std::string> name;
     Value value;

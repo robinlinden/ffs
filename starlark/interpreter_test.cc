@@ -15,6 +15,16 @@ int main() {
 
     etest::Suite s{};
 
+    s.add_test("to_string(Value)", [](etest::IActions &a) {
+        a.expect_eq(to_string(Value{std::int64_t{42}}), "42");
+        a.expect_eq(to_string(Value{std::string{"hello"}}), "hello");
+        a.expect_eq(
+            to_string(Value{std::vector<Value>{{std::int64_t{1}}, {std::int64_t{2}}}}), "[1, 2]");
+        a.expect_eq(
+            to_string(Value{std::make_shared<NativeFn>([](auto const &) { return std::nullopt; })}),
+            "[NativeFunction]");
+    });
+
     s.add_test("Program", [](etest::IActions &a) {
         Program program{
             .statements{
