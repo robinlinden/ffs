@@ -116,7 +116,8 @@ std::optional<std::vector<Target>> targets_from_build_file(std::filesystem::path
 
     auto res = interpreter.run(*program);
     if (!res) {
-        std::cerr << "Query failed. :(\n";
+        std::cerr << "Query for '" << bf << "' failed w/ reason '" << to_string(res.error())
+                  << "'. :(\n";
         return std::nullopt;
     }
 
