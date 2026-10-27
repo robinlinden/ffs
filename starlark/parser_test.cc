@@ -16,6 +16,10 @@
 int main() {
     auto test_cases = std::to_array<std::pair<std::string_view, starlark::Program>>({
         {
+            "",
+            starlark::Program{},
+        },
+        {
             R"(load("@rules_cc//cc:defs.bzl", "cc_library", "cc_test"))",
             starlark::Program{
                 .statements{
