@@ -130,7 +130,7 @@ std::optional<std::vector<Target>> targets_from_build_file(std::filesystem::path
     return targets;
 }
 
-int run_debug(int argc, char **argv) {
+int run_debug([[maybe_unused]] int argc, char **argv) {
     assert(argc == 2);
 
     auto input = std::ifstream{argv[1]};
@@ -160,7 +160,7 @@ int run_debug(int argc, char **argv) {
     return 0;
 }
 
-int run_query(int argc, char **argv) {
+int run_query([[maybe_unused]] int argc, char **argv) {
     assert(argc == 3);
 
     auto cwd = std::filesystem::current_path();
