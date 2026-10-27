@@ -33,15 +33,12 @@ std::string to_string(std::vector<starlark::Token> const &tokens) {
 
 // Find the first directory w/ a MODULE.bazel above a given path.
 std::optional<std::filesystem::path> project_root(std::filesystem::path from) {
-    assert(std::filesystem::is_directory(from));
-
     do {
         if (std::filesystem::exists(from / "MODULE.bazel")) {
             return from;
         }
 
         from = from.parent_path();
-        std::cerr << from << std::endl;
     } while (from != from.parent_path());
 
     return std::nullopt;
