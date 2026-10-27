@@ -275,6 +275,16 @@ public:
         std::ignore = def; // TODO(robinlinden): Implement.
         return Value{};
     }
+
+    std::expected<Value, Error> run(DictExpr const &dict_expr) {
+        std::ignore = dict_expr; // TODO(robinlinden): Implement.
+        return Value{};
+    }
+
+    std::expected<Value, Error> run(ListComp const &list_comp) {
+        std::ignore = list_comp; // TODO(robinlinden): Implement.
+        return Value{};
+    }
 };
 
 } // namespace starlark
