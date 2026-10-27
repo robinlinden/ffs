@@ -70,12 +70,14 @@ struct Target {
 std::optional<std::vector<Target>> targets_from_build_file(std::filesystem::path bf) {
     std::ifstream input{bf};
     if (!input) {
+        std::cerr << "Failed to open build file '" << bf << "'.\n";
         return std::nullopt;
     }
 
     std::string content{std::istreambuf_iterator<char>(input), std::istreambuf_iterator<char>()};
     auto program = starlark::parse(content);
     if (!program) {
+        std::cerr << "Unable to parse program for build file '" << bf << ".\n";
         return std::nullopt;
     }
 
