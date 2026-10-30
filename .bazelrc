@@ -12,6 +12,9 @@ test --test_verbose_timeout_warnings
 # Compiler configuration
 # =========================================================
 
+# Include 3rd-party headers w/ <> instead of "".
+build --features=external_include_paths
+
 build:linux --cxxopt=-std=c++2b
 build:windows --cxxopt=-std:c++23preview
 build:windows --features=-default_cpp_std

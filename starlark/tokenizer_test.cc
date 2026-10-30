@@ -6,7 +6,7 @@
 
 #include "starlark/token.h"
 
-#include "etest/etest2.h"
+#include <etest/etest2.h>
 
 #include <array>
 #include <cassert>

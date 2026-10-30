@@ -6,7 +6,7 @@
 
 #include "starlark/ast.h"
 
-#include "etest/etest2.h"
+#include <etest/etest2.h>
 
 #include <array>
 #include <string>
