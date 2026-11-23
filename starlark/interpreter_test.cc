@@ -257,6 +257,58 @@ int main() {
         a.expect_eq(run(slice_expr), failure(Error::SliceIndexOutOfBounds));
     });
 
+    s.add_test("MemberExpr, removesuffix", [](etest::IActions &a) {
+        auto removesuffix = MemberExpr{
+            .target = std::make_shared<Expression>(StringLiteral{"parser_test.cc"}),
+            .member = Identifier{"removesuffix"},
+        };
+
+        auto call = CallExpr{
+            .target = std::make_shared<Expression>(removesuffix),
+            .args{Argument{.expr = StringLiteral{".cc"}}},
+        };
+        a.expect_eq(run(call), Value{std::string{"parser_test"}});
+
+        call.args.front().expr = StringLiteral{".h"};
+        a.expect_eq(run(call), Value{std::string{"parser_test.cc"}});
+
+        CallExpr no_args{
+            .target = std::make_shared<Expression>(removesuffix),
+            .args{},
+        };
+        a.expect_eq(run(no_args), failure(Error::BadArgument));
+
+        CallExpr bad_suffix{
+            .target = std::make_shared<Expression>(removesuffix),
+            .args{Argument{.expr = IntLiteral{42}}},
+        };
+        a.expect_eq(run(bad_suffix), failure(Error::BadArgument));
+
+        Interpreter interpreter{};
+        interpreter.variables["filename"] = Value{std::string{"parser_test.cc"}};
+        MemberExpr variable_removesuffix{
+            .target = std::make_shared<Expression>(Identifier{"filename"}),
+            .member = Identifier{"removesuffix"},
+        };
+        CallExpr variable_call{
+            .target = std::make_shared<Expression>(variable_removesuffix),
+            .args{Argument{.expr = StringLiteral{".cc"}}},
+        };
+        a.expect_eq(interpreter.run(variable_call), Value{std::string{"parser_test"}});
+
+        MemberExpr bad_target{
+            .target = std::make_shared<Expression>(IntLiteral{42}),
+            .member = Identifier{"removesuffix"},
+        };
+        a.expect_eq(run(bad_target), failure(Error::UnknownIdentifier));
+
+        MemberExpr unknown_member{
+            .target = std::make_shared<Expression>(StringLiteral{"test"}),
+            .member = Identifier{"unknown"},
+        };
+        a.expect_eq(run(unknown_member), failure(Error::UnknownIdentifier));
+    });
+
     s.add_test("CallExpr, native function", [](etest::IActions &a) {
         Interpreter i;
         bool called = false;

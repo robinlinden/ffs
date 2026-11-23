@@ -7,6 +7,7 @@
 
 #include "starlark/ast.h"
 
+#include <cassert>
 #include <cstdint>
 #include <expected>
 #include <functional>
@@ -25,6 +26,7 @@ struct NativeArgument;
 
 enum class Error {
     UnknownIdentifier,
+    BadArgument,
     InvalidSliceTarget,
     InvalidSliceIndex,
     SliceIndexOutOfBounds,
@@ -38,6 +40,8 @@ constexpr std::string_view to_string(Error e) {
     switch (e) {
     case Error::UnknownIdentifier:
         return "UnknownIdentifier";
+    case Error::BadArgument:
+        return "BadArgument";
     case Error::InvalidSliceTarget:
         return "InvalidSliceTarget";
     case Error::InvalidSliceIndex:
@@ -64,6 +68,29 @@ struct Value {
     std::variant<std::int64_t, std::string, std::vector<Value>, NativeFnPtr> v;
     constexpr bool operator==(Value const &) const = default;
 };
+
+enum class ValueType {
+    Integer,
+    String,
+    List,
+    NativeFunction,
+};
+
+constexpr ValueType value_type(Value const &value) {
+    if (std::holds_alternative<std::int64_t>(value.v)) {
+        return ValueType::Integer;
+    }
+
+    if (std::holds_alternative<std::string>(value.v)) {
+        return ValueType::String;
+    }
+
+    if (std::holds_alternative<std::vector<Value>>(value.v)) {
+        return ValueType::List;
+    }
+
+    return ValueType::NativeFunction;
+}
 
 constexpr std::string to_string(Value const &value) {
     struct ValueStringifier {
@@ -100,11 +127,48 @@ struct NativeArgument {
 using ModuleExports = std::map<std::string, Value, std::less<>>;
 using ModuleLoader = std::function<std::optional<ModuleExports>(std::string_view)>;
 
+using MemberFunction = std::function<std::expected<Value, Error>(Value const &target)>;
+
 struct Builtins {
     std::map<std::string, Value, std::less<>> identifiers{
         // TODO(robinlinden): Bless these with keywordness.
         {"True", Value{std::int64_t{1}}},
         {"False", Value{std::int64_t{0}}},
+    };
+
+    std::map<ValueType, std::map<std::string, MemberFunction, std::less<>>> members{
+        {
+            ValueType::String,
+            {
+                {
+                    "removesuffix",
+                    [](Value const &target) -> std::expected<Value, Error> {
+                        assert(std::holds_alternative<std::string>(target.v));
+
+                        return Value{std::make_shared<NativeFn>(
+                            [original = std::get<std::string>(target.v)](
+                                std::vector<NativeArgument> args) -> std::expected<Value, Error> {
+                                if (args.size() != 1) {
+                                    return std::unexpected{Error::BadArgument};
+                                }
+
+                                auto const *suffix =
+                                    std::get_if<std::string>(&args.front().value.v);
+                                if (suffix == nullptr) {
+                                    return std::unexpected{Error::BadArgument};
+                                }
+
+                                if (original.ends_with(*suffix)) {
+                                    return Value{
+                                        original.substr(0, original.size() - suffix->size())};
+                                }
+
+                                return Value{original};
+                            })};
+                    },
+                },
+            },
+        },
     };
 };
 
@@ -222,6 +286,25 @@ public:
         }
 
         return std::unexpected{Error::InvalidSliceTarget};
+    }
+
+    std::expected<Value, Error> run(MemberExpr const &member) {
+        auto target = run(*member.target);
+        if (!target) {
+            return std::unexpected{target.error()};
+        }
+
+        auto type_members = builtins.members.find(value_type(*target));
+        if (type_members == builtins.members.end()) {
+            return std::unexpected{Error::UnknownIdentifier};
+        }
+
+        auto member_function = type_members->second.find(member.member.name);
+        if (member_function == type_members->second.end()) {
+            return std::unexpected{Error::UnknownIdentifier};
+        }
+
+        return member_function->second(*target);
     }
 
     std::expected<Value, Error> run(CallExpr const &ce) {
