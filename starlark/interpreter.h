@@ -100,9 +100,18 @@ struct NativeArgument {
 using ModuleExports = std::map<std::string, Value, std::less<>>;
 using ModuleLoader = std::function<std::optional<ModuleExports>(std::string_view)>;
 
+struct Builtins {
+    std::map<std::string, Value, std::less<>> identifiers{
+        // TODO(robinlinden): Bless these with keywordness.
+        {"True", Value{std::int64_t{1}}},
+        {"False", Value{std::int64_t{0}}},
+    };
+};
+
 class Interpreter {
 public:
     std::map<std::string, Value, std::less<>> variables;
+    Builtins builtins;
     ModuleLoader module_loader;
 
     std::expected<Value, Error> run(Program const &program) {
@@ -138,11 +147,16 @@ public:
 
     std::expected<Value, Error> run(Identifier const &ident) {
         auto it = variables.find(ident.name);
-        if (it == variables.end()) {
-            return std::unexpected{Error::UnknownIdentifier};
+        if (it != variables.end()) {
+            return it->second;
         }
 
-        return it->second;
+        auto builtin = builtins.identifiers.find(ident.name);
+        if (builtin != builtins.identifiers.end()) {
+            return builtin->second;
+        }
+
+        return std::unexpected{Error::UnknownIdentifier};
     }
 
     std::expected<Value, Error> run(StringLiteral const &str) { return Value{str.value}; }

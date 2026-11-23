@@ -107,6 +107,7 @@ std::optional<std::vector<Target>> targets_from_build_file(std::filesystem::path
 
     starlark::Interpreter interpreter{
         .variables{},
+        .builtins{},
         .module_loader = [&](std::string_view module) -> std::optional<starlark::ModuleExports> {
             if (module.starts_with("//")) {
                 auto root = project_root(bf);

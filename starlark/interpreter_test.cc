@@ -89,6 +89,14 @@ int main() {
 
         auto missing_ident = Identifier{"missing"};
         a.expect_eq(interpreter.run(missing_ident), failure(Error::UnknownIdentifier));
+
+        // TODO(robinlinden): This should break once True/False have been
+        // blessed w/ proper keywordness.
+        a.expect_eq(interpreter.run(Identifier{"True"}), Value{std::int64_t{1}});
+        a.expect_eq(interpreter.run(Identifier{"False"}), Value{std::int64_t{0}});
+
+        interpreter.variables["True"] = Value{std::string{"shadowed"}};
+        a.expect_eq(interpreter.run(Identifier{"True"}), Value{std::string{"shadowed"}});
     });
 
     s.add_test("LoadStmt", [](etest::IActions &a) {
