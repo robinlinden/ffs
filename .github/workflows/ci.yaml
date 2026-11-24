@@ -56,7 +56,7 @@ jobs:
         if: ${{ matrix.cc != '' }}
       - run: sudo apt-get update && sudo apt-get install --assume-yes --no-install-recommends lcov
         if: ${{ matrix.coverage }}
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v7.0.1
         with:
           # codecov needs the history to know what to compare the coverage to.
           fetch-depth: 0
@@ -78,14 +78,14 @@ jobs:
   pre-commit:
     runs-on: ubuntu-slim
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v7.0.1
       - run: pipx install pre-commit==4.7.0
       - run: pre-commit run --all-files
 
   clang-format:
     runs-on: ubuntu-slim
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v7.0.1
       - name: Set up the llvm repository
         run: |
           wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
@@ -97,14 +97,14 @@ jobs:
   buildifier:
     runs-on: ubuntu-slim
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v7.0.1
       - run: wget --output-document=buildifier https://github.com/bazelbuild/buildtools/releases/download/v10.1.0/buildifier-linux-amd64 && sudo chmod +x buildifier
       - run: ./buildifier --lint=warn --warnings=all -mode diff $(find . -type f -iname "*.bazel" -or -iname "*.bzl")
 
   prettier:
     runs-on: ubuntu-slim
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v7.0.1
       - run: npm install --global prettier@3.9.10
       - run: npx prettier --ignore-path .gitignore --write .
       - run: git diff --exit-code
