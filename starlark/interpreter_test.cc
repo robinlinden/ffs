@@ -309,6 +309,74 @@ int main() {
         a.expect_eq(run(unknown_member), failure(Error::UnknownIdentifier));
     });
 
+    s.add_test("ListComp", [](etest::IActions &a) {
+        ListComp list_comp{
+            .element = std::make_shared<Expression>(CallExpr{
+                .target = std::make_shared<Expression>(MemberExpr{
+                    .target = std::make_shared<Expression>(Identifier{"src"}),
+                    .member = Identifier{"removesuffix"},
+                }),
+                .args{Argument{.expr = StringLiteral{".cc"}}},
+            }),
+            .iterator_var = Identifier{"src"},
+            .iterable = std::make_shared<Expression>(ListExpr{
+                .elements{
+                    Expression{StringLiteral{"parser_test.cc"}},
+                    Expression{StringLiteral{"interpreter_test.cc"}},
+                },
+            }),
+        };
+
+        Interpreter i;
+        i.variables["src"] = Value{std::string{"preserved"}};
+        a.expect_eq(
+            i.run(list_comp),
+            Value{std::vector<Value>{
+                Value{std::string{"parser_test"}},
+                Value{std::string{"interpreter_test"}},
+            }});
+        a.expect_eq(i.variables["src"], Value{std::string{"preserved"}});
+
+        i.variables.erase("src");
+        a.expect_eq(
+            i.run(list_comp),
+            Value{std::vector<Value>{
+                Value{std::string{"parser_test"}},
+                Value{std::string{"interpreter_test"}},
+            }});
+        a.expect_eq(i.variables.find("src"), i.variables.end());
+    });
+
+    s.add_test("ListComp, element error restores iterator", [](etest::IActions &a) {
+        ListComp list_comp{
+            .element = std::make_shared<Expression>(Identifier{"missing"}),
+            .iterator_var = Identifier{"src"},
+            .iterable = std::make_shared<Expression>(ListExpr{
+                .elements{Expression{StringLiteral{"one"}}},
+            }),
+        };
+
+        Interpreter i;
+        i.variables["src"] = Value{std::string{"preserved"}};
+        a.expect_eq(i.run(list_comp), failure(Error::UnknownIdentifier));
+        a.expect_eq(i.variables["src"], Value{std::string{"preserved"}});
+
+        i.variables.erase("src");
+        a.expect_eq(i.run(list_comp), failure(Error::UnknownIdentifier));
+        a.expect_eq(i.variables.find("src"), i.variables.end());
+    });
+
+    s.add_test("ListComp, not iterable", [](etest::IActions &a) {
+        ListComp list_comp{
+            .element = std::make_shared<Expression>(Identifier{"missing"}),
+            .iterator_var = Identifier{"src"},
+            .iterable = std::make_shared<Expression>(IntLiteral{.value = 42}),
+        };
+
+        Interpreter i;
+        a.expect_eq(i.run(list_comp), failure(Error::NotIterable));
+    });
+
     s.add_test("CallExpr, native function", [](etest::IActions &a) {
         Interpreter i;
         bool called = false;

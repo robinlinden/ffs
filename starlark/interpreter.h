@@ -31,6 +31,7 @@ enum class Error {
     InvalidSliceIndex,
     SliceIndexOutOfBounds,
     NotCallable,
+    NotIterable,
     ModuleLoaderUnavailable,
     ModuleLoadFailed,
     MissingExport,
@@ -50,6 +51,8 @@ constexpr std::string_view to_string(Error e) {
         return "SliceIndexOutOfBounds";
     case Error::NotCallable:
         return "NotCallable";
+    case Error::NotIterable:
+        return "NotIterable";
     case Error::ModuleLoaderUnavailable:
         return "ModuleLoaderUnavailable";
     case Error::ModuleLoadFailed:
@@ -379,8 +382,47 @@ public:
     }
 
     std::expected<Value, Error> run(ListComp const &list_comp) {
-        std::ignore = list_comp; // TODO(robinlinden): Implement.
-        return Value{};
+        auto iterable = run(*list_comp.iterable);
+        if (!iterable) {
+            return iterable;
+        }
+
+        auto const *values = std::get_if<std::vector<Value>>(&iterable->v);
+        if (values == nullptr) {
+            return std::unexpected{Error::NotIterable};
+        }
+
+        auto previous = variables.find(list_comp.iterator_var.name);
+        std::optional<Value> previous_value;
+        if (previous != variables.end()) {
+            previous_value = std::exchange(previous->second, {});
+        }
+
+        std::vector<Value> result;
+        result.reserve(values->size());
+        for (auto const &value : *values) {
+            variables[list_comp.iterator_var.name] = value;
+            auto element = run(*list_comp.element);
+            if (!element) {
+                if (previous_value) {
+                    variables[list_comp.iterator_var.name] = std::move(*previous_value);
+                } else {
+                    variables.erase(list_comp.iterator_var.name);
+                }
+
+                return element;
+            }
+
+            result.push_back(std::move(*element));
+        }
+
+        if (previous_value) {
+            variables[list_comp.iterator_var.name] = std::move(*previous_value);
+        } else {
+            variables.erase(list_comp.iterator_var.name);
+        }
+
+        return Value{std::move(result)};
     }
 };
 
