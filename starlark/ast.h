@@ -58,7 +58,6 @@ struct CallExpr {
 
 struct DictExpr {
     std::vector<std::pair<Expression, Expression>> entries;
-    // Clang 18 dies if this is defaulted.
     constexpr bool operator==(DictExpr const &) const;
 };
 
@@ -98,7 +97,7 @@ constexpr bool CallExpr::operator==(CallExpr const &o) const {
     return *target == *o.target && args == o.args;
 }
 
-constexpr bool DictExpr::operator==(DictExpr const &o) const { return entries == o.entries; }
+constexpr bool DictExpr::operator==(DictExpr const &o) const = default;
 
 constexpr bool SliceExpr::operator==(SliceExpr const &o) const {
     return *target == *o.target && *index == *o.index;
