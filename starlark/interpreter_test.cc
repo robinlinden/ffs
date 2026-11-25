@@ -31,6 +31,9 @@ int main() {
         a.expect_eq(
             to_string(Value{std::vector<Value>{{std::int64_t{1}}, {std::int64_t{2}}}}), "[1, 2]");
         a.expect_eq(
+            to_string(Value{Dict{{Value{"key"}, Value{42}}, {Value{1}, Value{"value"}}}}),
+            "{key: 42, 1: value}");
+        a.expect_eq(
             to_string(Value{std::make_shared<NativeFn>([](auto const &) { return Value{}; })}),
             "[NativeFunction]");
     });
@@ -181,6 +184,31 @@ int main() {
                 Value{std::string{"bar"}},
                 Value{std::string{"baz"}},
             }});
+    });
+
+    s.add_test("DictExpr", [](etest::IActions &a) {
+        auto dict_expr = DictExpr{
+            .entries{
+                {Expression{StringLiteral{"foo"}}, Expression{IntLiteral{42}}},
+                {Expression{IntLiteral{1}}, Expression{StringLiteral{"bar"}}},
+            },
+        };
+
+        auto result = run(dict_expr);
+        a.expect_eq(result, Value{Dict{{Value{"foo"}, Value{42}}, {Value{1}, Value{"bar"}}}});
+        a.expect_eq(value_type(Value{Dict{}}), ValueType::Dictionary);
+        a.expect_eq(run(DictExpr{}), Value{Dict{}});
+
+        dict_expr.entries.push_back({Expression{StringLiteral{"foo"}}, Expression{IntLiteral{13}}});
+        a.expect_eq(run(dict_expr), failure(Error::DuplicateDictKey));
+
+        dict_expr.entries.pop_back();
+        dict_expr.entries.front().second = Identifier{"missing"};
+        a.expect_eq(run(dict_expr), failure(Error::UnknownIdentifier));
+
+        dict_expr.entries.front().second = IntLiteral{42};
+        dict_expr.entries.front().first = Identifier{"missing"};
+        a.expect_eq(run(dict_expr), failure(Error::UnknownIdentifier));
     });
 
     s.add_test("SliceExpr, bad target", [](etest::IActions &a) {
