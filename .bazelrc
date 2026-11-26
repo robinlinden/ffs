@@ -53,6 +53,11 @@ build:ubsan --action_env=UBSAN_OPTIONS=halt_on_error=1:print_stacktrace=1
 build:ubsan   --test_env=UBSAN_OPTIONS=halt_on_error=1:print_stacktrace=1
 run:ubsan      --run_env=UBSAN_OPTIONS=halt_on_error=1:print_stacktrace=1
 
+# Special build options
+# =========================================================
+
+build:libcxx --cxxopt=-stdlib=libc++ --linkopt=-stdlib=libc++
+
 # Fuzzing options
 # =========================================================
 
