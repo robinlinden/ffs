@@ -7,6 +7,7 @@
 
 #include "starlark/ast.h"
 
+#include <algorithm>
 #include <cassert>
 #include <cstdint>
 #include <expected>
@@ -24,9 +25,12 @@ namespace starlark {
 struct Value;
 struct NativeArgument;
 
+using Dict = std::vector<std::pair<Value, Value>>;
+
 enum class Error {
     UnknownIdentifier,
     BadArgument,
+    DuplicateDictKey,
     InvalidSliceTarget,
     InvalidSliceIndex,
     SliceIndexOutOfBounds,
@@ -43,6 +47,8 @@ constexpr std::string_view to_string(Error e) {
         return "UnknownIdentifier";
     case Error::BadArgument:
         return "BadArgument";
+    case Error::DuplicateDictKey:
+        return "DuplicateDictKey";
     case Error::InvalidSliceTarget:
         return "InvalidSliceTarget";
     case Error::InvalidSliceIndex:
@@ -68,14 +74,17 @@ using NativeFn = std::function<std::expected<Value, Error>(std::vector<NativeArg
 using NativeFnPtr = std::shared_ptr<NativeFn>;
 
 struct Value {
-    std::variant<std::int64_t, std::string, std::vector<Value>, NativeFnPtr> v;
-    constexpr bool operator==(Value const &) const = default;
+    std::variant<std::int64_t, std::string, std::vector<Value>, Dict, NativeFnPtr> v;
+    constexpr bool operator==(Value const &) const;
 };
+
+constexpr bool Value::operator==(Value const &) const = default;
 
 enum class ValueType {
     Integer,
     String,
     List,
+    Dictionary,
     NativeFunction,
 };
 
@@ -90,6 +99,10 @@ constexpr ValueType value_type(Value const &value) {
 
     if (std::holds_alternative<std::vector<Value>>(value.v)) {
         return ValueType::List;
+    }
+
+    if (std::holds_alternative<Dict>(value.v)) {
+        return ValueType::Dictionary;
     }
 
     return ValueType::NativeFunction;
@@ -112,6 +125,24 @@ constexpr std::string to_string(Value const &value) {
             }
 
             result += ']';
+            return result;
+        }
+
+        std::string operator()(Dict const &v) {
+            std::string result = "{";
+
+            bool first = true;
+            for (auto const &[key, value] : v) {
+                if (!std::exchange(first, false)) {
+                    result += ", ";
+                }
+
+                result += to_string(key);
+                result += ": ";
+                result += to_string(value);
+            }
+
+            result += '}';
             return result;
         }
 
@@ -377,8 +408,29 @@ public:
     }
 
     std::expected<Value, Error> run(DictExpr const &dict_expr) {
-        std::ignore = dict_expr; // TODO(robinlinden): Implement.
-        return Value{};
+        Dict entries;
+        entries.reserve(dict_expr.entries.size());
+
+        for (auto const &[key_expr, value_expr] : dict_expr.entries) {
+            auto key = run(key_expr);
+            if (!key) {
+                return std::unexpected{key.error()};
+            }
+
+            auto value = run(value_expr);
+            if (!value) {
+                return std::unexpected{value.error()};
+            }
+
+            auto existing = std::ranges::find(entries, *key, &Dict::value_type::first);
+            if (existing != entries.end()) {
+                return std::unexpected{Error::DuplicateDictKey};
+            }
+
+            entries.emplace_back(std::move(*key), std::move(*value));
+        }
+
+        return Value{std::move(entries)};
     }
 
     std::expected<Value, Error> run(ListComp const &list_comp) {
