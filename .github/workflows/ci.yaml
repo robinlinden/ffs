@@ -59,10 +59,23 @@ jobs:
             bzlopts: --config asan --config ubsan --config libcxx
             apt: libc++-22-dev
 
+          - name: clang-23
+            os: ubuntu-26.04
+            cc: clang-23
+            cxx: clang++-23
+            fuzz: true
+            bzlopts: --config libfuzzer --config asan --config ubsan
+            apt: clang-23 libclang-rt-23-dev
+
           - name: windows-msvc
             os: windows-2025
 
     steps:
+      - name: Set up the llvm repository
+        if: ${{ matrix.cc == 'clang-23' }}
+        run: |
+          wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo gpg --dearmor --yes -o /etc/apt/trusted.gpg.d/llvm-snapshot.gpg
+          sudo apt-add-repository "deb http://apt.llvm.org/resolute/ llvm-toolchain-resolute-23 main"
       - run: echo "CC=${{ matrix.cc }}" >>$GITHUB_ENV && echo "CXX=${{ matrix.cxx }}" >>$GITHUB_ENV
         if: ${{ matrix.cc != '' }}
       - run: sudo apt-get update && sudo apt-get install --assume-yes --no-install-recommends lcov
